@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "332507618644",
+    "project_id": "fp-ppb-b1f14",
+    "storage_bucket": "fp-ppb-b1f14.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:332507618644:android:63e1863d307b7acbeabcc1",
+        "android_client_info": {
+          "package_name": "com.example.fp_ppb"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADJpC-IF4dOB0ryWPr4yXMafOiG_JjoeI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
