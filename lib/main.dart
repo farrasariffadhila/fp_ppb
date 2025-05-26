@@ -1,6 +1,7 @@
 import 'package:fp_ppb/screens/home.dart';
 import 'package:fp_ppb/screens/login.dart';
 import 'package:fp_ppb/screens/register.dart';
+import 'package:fp_ppb/screens/favourite.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -18,10 +19,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(initialRoute: 'login', routes: {
+    return MaterialApp(initialRoute: 'home', routes: {
       'home': (context) => const HomeScreen(),
       'login': (context) => const LoginScreen(),
       'register': (context) => const RegisterScreen(),
+      'favourite': (context) => const FavouriteScreen(),
     });
   }
 }
