@@ -14,6 +14,10 @@ class HomeScreen extends StatelessWidget {
     Navigator.pushNamed(context, 'favourite');
   }
 
+  void wishlist(context) {
+    Navigator.pushNamed(context, 'wishlist');
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -35,9 +39,13 @@ class HomeScreen extends StatelessWidget {
                     onPressed: () => logout(context),
                     child: const Text('Logout'),
                   ),
+                  OutlinedButton.icon(
+                    onPressed: () => wishlist(context),
+                    label: const Text('Wishlist'),
+                  ),
                   OutlinedButton(
                     onPressed: () => favourite(context),
-                    child: const Text('favourite'),
+                    child: const Text('Favourite'),
                   )
                 ],
               ),
