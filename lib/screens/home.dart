@@ -38,7 +38,11 @@ class HomeScreen extends StatelessWidget {
                   OutlinedButton(
                     onPressed: () => favourite(context),
                     child: const Text('favourite'),
-                  )
+                  ),
+                  OutlinedButton(
+                    onPressed: () => Navigator.pushNamed(context, 'rent'),
+                    child: const Text('Rent'),
+                  ),
                 ],
               ),
             ),
