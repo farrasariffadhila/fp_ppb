@@ -3,6 +3,7 @@ import 'package:fp_ppb/screens/login.dart';
 import 'package:fp_ppb/screens/register.dart';
 import 'package:fp_ppb/screens/favourite.dart';
 import 'package:fp_ppb/screens/rent.dart';
+import 'package:fp_ppb/screens/wishlist.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -26,6 +27,7 @@ class MyApp extends StatelessWidget {
       'register': (context) => const RegisterScreen(),
       'favourite': (context) => const FavouriteScreen(),
       'rent': (context) => const RentScreen(),
+      'wishlist': (context) => const WishlistScreen(),
     });
   }
 }
