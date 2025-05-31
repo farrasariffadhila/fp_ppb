@@ -51,6 +51,10 @@ class HomeScreen extends StatelessWidget {
                     onPressed: () => Navigator.pushNamed(context, 'rent'),
                     child: const Text('Rent'),
                   ),
+                  OutlinedButton(
+                    onPressed: () => Navigator.pushNamed(context, 'test'),
+                    child: const Text('Test'),
+                  ),
                 ],
               ),
             ),

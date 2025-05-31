@@ -24,12 +24,6 @@ class _RentScreenState extends State<RentScreen> {
   static const price = 50000;
   late String userId;
 
-  void logout() async {
-    await _auth.signOut();
-    if (!context.mounted) return;
-    Navigator.pushReplacementNamed(context, 'login');
-  }
-
   Future<void> getEmail() async {
     User? user = _auth.currentUser;
     if (user != null) {
@@ -52,8 +46,87 @@ class _RentScreenState extends State<RentScreen> {
   void initState() {
     super.initState();
     getEmail();
-    _startDateController.text = DateTime.now().toLocal().toString().split(' ')[0]; // Set default start date to today
+    _startDateController.text = DateTime.now().toLocal().toString().split(' ')[0];
     _endDateController.text = (DateTime.now().add(Duration(days: 1)).toLocal().toString().split(' ')[0]);
+  }
+
+  void payment(transactionId) {
+    // push transaction id to payment screen
+    Navigator.pushReplacementNamed(context, 'payment', arguments:{
+      'transactionId': transactionId,
+    });
+  }
+     
+
+  void addTransaction(movieid) async {
+    if (_formKey.currentState?.validate() ?? false) {
+      try {
+        // check movie availability
+        DocumentSnapshot movieDoc = await _firestore.collection('movies').doc(movieid).get();
+        if (!movieDoc.exists) {
+          await _firestore.collection('movies').doc(movieid).set({
+            'availableItems': 1,
+          });
+        } else {
+          int availableItems = movieDoc['availableItems'] ?? 0;
+          if (availableItems > 0) {
+            await _firestore.collection('movies').doc(movieid).update({
+              'availableItems': availableItems - 1,
+            });
+          } else {
+            if (!context.mounted) return;
+            // create popup dialog to inform user that there are no available items
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text('No Available Items'),
+                content: Text('Sorry, there are no available items for rent at the moment.'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('OK'),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+        }
+
+        // create ref of the transaction from time now
+        final now = DateTime.now();
+        final transactionRef = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}${now.millisecond.toString().padLeft(3, '0')}';
+        // Add transaction to Firestore
+        DocumentReference transactionDocRef = await _firestore.collection('transactions').add({
+          'userId': userId,
+          'name': _nameController.text,
+          'email': _emailController.text,
+          'phone': _phoneController.text,
+          'address': _addressController.text,
+          'startDate': _startDateController.text,
+          'endDate': _endDateController.text,
+          'totalPrice': price * (_endDate != null && _startDate != null ? _endDate!.difference(_startDate!).inDays : 0),
+          'transactionId': transactionRef,
+          'movieId': movieid,
+        });
+
+        // Pass the generated transaction ID to the payment method
+        payment(transactionDocRef.id);
+
+        // clear the form fields
+        _nameController.clear();
+        _emailController.clear();
+        _phoneController.clear();
+        _addressController.clear();
+        _startDateController.clear();
+        _endDateController.clear();
+
+      } catch (e) {
+        if (!context.mounted) return;
+      }
+    }
   }
 
   @override
@@ -286,28 +359,15 @@ class _RentScreenState extends State<RentScreen> {
                             width: double.infinity,
                             child: ElevatedButton(
                               onPressed: () {
-                                if (_formKey.currentState!.validate()) {
-                                  // Handle form submission
-                                  showDialog(
-                                    context: context,
-                                    builder: (_) => AlertDialog(
-                                      title: Text('Checkout Complete', style: TextStyle(color: Colors.black)),
-                                      content: Text('Thank you for your order!', style: TextStyle(color: Colors.black)),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context),
-                                          child: Text('OK', style: TextStyle(color: Colors.white)),
-                                        ),
-                                      ],
-                                    ),
-                                  );
+                                if (_formKey.currentState?.validate() ?? false) {
+                                  addTransaction('rent_item_id'); // Replace with actual movie ID
                                 }
                               },
-                              child: Text('Submit', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blueAccent, // Button color
                                 padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                               ),
+                              child: Text('Submit', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
@@ -352,7 +412,7 @@ class _RentScreenState extends State<RentScreen> {
           if (value == null || value.isEmpty) {
             return '$label is required';
           }
-          final phonePattern = r'^\+?[0-9]{10,15}$';
+          final phonePattern = r'^\+?[0-9]{9,15}$';
           final regex = RegExp(phonePattern);
           if (!regex.hasMatch(value)) {
             return 'Please enter a valid phone number';
