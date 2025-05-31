@@ -4,6 +4,7 @@ import 'package:fp_ppb/screens/register.dart';
 import 'package:fp_ppb/screens/favourite.dart';
 import 'package:fp_ppb/screens/rent.dart';
 import 'package:fp_ppb/screens/wishlist.dart';
+import 'package:fp_ppb/screens/payment.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -28,6 +29,11 @@ class MyApp extends StatelessWidget {
       'favourite': (context) => const FavouriteScreen(),
       'rent': (context) => const RentScreen(),
       'wishlist': (context) => const WishlistScreen(),
+      'payment': (context) {
+        final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+        final transactionId = args?['transactionId'] ?? '';
+        return PaymentScreen(transactionId: transactionId);
+      },
     });
   }
 }
