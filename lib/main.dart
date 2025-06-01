@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:fp_ppb/screens/home.dart';
 import 'package:fp_ppb/screens/login.dart';
 import 'package:fp_ppb/screens/register.dart';
@@ -11,9 +12,19 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await dotenv.load(fileName: ".env");
+    print("✅ .env loaded: ${dotenv.env['TMDB_API_KEY']}");
+  } catch (e) {
+    print("❌ Failed to load .env: $e");
+  }
+
+  // Inisialisasi Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   runApp(const MyApp());
 }
 

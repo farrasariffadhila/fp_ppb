@@ -1,55 +1,50 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:fp_ppb/Model/model.dart';
 
-const apiKey = "8d006def22b860f33fa6325df2e839b7";
-
 class APIservices {
-  final nowShowingApi =
+  final String apiKey = dotenv.env['TMDB_API_KEY'] ?? '';
+  late final String nowShowingApi =
       "https://api.themoviedb.org/3/movie/now_playing?api_key=$apiKey";
-  final upComingApi =
+  late final String upComingApi =
       "https://api.themoviedb.org/3/movie/upcoming?api_key=$apiKey";
-  final popularApi =
+  late final String popularApi =
       "https://api.themoviedb.org/3/movie/popular?api_key=$apiKey";
-  // for nowShowing moveis
+
   Future<List<Movie>> getNowShowing() async {
-    Uri url = Uri.parse(nowShowingApi);
+    final url = Uri.parse(nowShowingApi);
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body)['results'];
-      List<Movie> movies = data.map((movie) => Movie.fromMap(movie)).toList();
-      return movies;
+      return data.map((movie) => Movie.fromMap(movie)).toList();
     } else {
-      throw Exception("Failed to load data");
+      throw Exception("Failed to load now showing movies");
     }
   }
 
-  // for up coming moveis
   Future<List<Movie>> getUpComing() async {
-    Uri url = Uri.parse(upComingApi);
+    final url = Uri.parse(upComingApi);
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body)['results'];
-      List<Movie> movies = data.map((movie) => Movie.fromMap(movie)).toList();
-      return movies;
+      return data.map((movie) => Movie.fromMap(movie)).toList();
     } else {
-      throw Exception("Failed to load data");
+      throw Exception("Failed to load upcoming movies");
     }
   }
 
-  // for popular moves
   Future<List<Movie>> getPopular() async {
-    Uri url = Uri.parse(popularApi);
+    final url = Uri.parse(popularApi);
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body)['results'];
-      List<Movie> movies = data.map((movie) => Movie.fromMap(movie)).toList();
-      return movies;
+      return data.map((movie) => Movie.fromMap(movie)).toList();
     } else {
-      throw Exception("Failed to load data");
+      throw Exception("Failed to load popular movies");
     }
   }
 }

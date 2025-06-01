@@ -41,8 +41,7 @@ dependencies:
   http: ^1.4.0
   lottie: ^3.3.1
   carousel_slider: 5.0.0
-  cached_network_image: ^3.3.1
-
+  flutter_dotenv: ^5.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -70,6 +69,7 @@ flutter:
     - assets/animation/loading.json
     - assets/animation/paymentSuccess.json
     - assets/logo/logo.png
+    - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
