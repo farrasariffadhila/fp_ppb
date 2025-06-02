@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fp_ppb/Services/services.dart';
 import '../Model/model.dart';
+import 'detail.dart';
 import 'login.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -38,6 +39,15 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pushNamed(context, 'wishlist');
   }
 
+  void _navigateToDetailScreen(BuildContext context, Movie movie) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetailScreen(movieId: movie.id),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -46,7 +56,6 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!snapshot.hasData) {
           return const LoginScreen();
         }
-
         return Scaffold(
           appBar: AppBar(
             title: const Text("Movie App"),
@@ -133,34 +142,39 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemCount: movies.length,
                         itemBuilder: (context, index, realIdx) {
                           final movie = movies[index];
-                          return Stack(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
-                                  image: DecorationImage(
-                                    image: NetworkImage(
-                                      "https://image.tmdb.org/t/p/original/${movie.backDropPath}",
+                          return GestureDetector(
+                            onTap: () => _navigateToDetailScreen(context, movie),
+                            child: Stack(
+                              alignment: Alignment.bottomCenter,
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    image: DecorationImage(
+                                      image: NetworkImage(
+                                        "https://image.tmdb.org/t/p/original/${movie.backDropPath}",
+                                      ),
+                                      fit: BoxFit.cover,
                                     ),
-                                    fit: BoxFit.cover,
                                   ),
                                 ),
-                              ),
-                              Positioned(
-                                bottom: 15,
-                                left: 0,
-                                right: 0,
-                                child: Text(
-                                  movie.title,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  style: const TextStyle(
+                                Positioned(
+                                  bottom: 15,
+                                  left: 0,
+                                  right: 0,
+                                  child: Text(
+                                    movie.title,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 18,
-                                      color: Colors.white),
-                                ),
-                              )
-                            ],
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                )
+                              ],
+                            ),
                           );
                         },
                         options: CarouselOptions(
@@ -189,16 +203,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           itemCount: movies.length,
                           itemBuilder: (context, index) {
                             final movie = movies[index];
-                            return Stack(
+                            return GestureDetector(
+                            onTap: () => _navigateToDetailScreen(context, movie),
+                            child: Stack(
                               children: [
                                 Container(
                                   width: 180,
-                                  margin: const EdgeInsets.symmetric(horizontal: 10),
+                                  margin: const EdgeInsets.symmetric(horizontal:10),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(20),
                                     image: DecorationImage(
                                       image: NetworkImage(
-                                          "https://image.tmdb.org/t/p/original/${movie.backDropPath}"),
+                                        "https://image.tmdb.org/t/p/original/${movie.backDropPath}",
+                                      ),
                                       fit: BoxFit.cover,
                                     ),
                                   ),
@@ -212,13 +229,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                     textAlign: TextAlign.center,
                                     maxLines: 1,
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Colors.white),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 )
                               ],
-                            );
+                            ),
+                          );
                           },
                         );
                       },
@@ -238,39 +257,44 @@ class _HomeScreenState extends State<HomeScreen> {
                         final movies = snapshot.data!;
                         return ListView.builder(
                           scrollDirection: Axis.horizontal,
+                           physics: const BouncingScrollPhysics(),
                           itemCount: movies.length,
                           itemBuilder: (context, index) {
                             final movie = movies[index];
-                            return Stack(
-                              children: [
-                                Container(
-                                  width: 180,
-                                  margin:
-                                  const EdgeInsets.symmetric(horizontal: 10),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    image: DecorationImage(
-                                      image: NetworkImage(
-                                          "https://image.tmdb.org/t/p/original/${movie.backDropPath}"),
-                                      fit: BoxFit.cover,
+                            return GestureDetector(
+                              onTap: () => _navigateToDetailScreen(context, movie),
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    width: 180,
+                                    margin: const EdgeInsets.symmetric(horizontal:10),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(20),
+                                      image: DecorationImage(
+                                        image: NetworkImage(
+                                          "https://image.tmdb.org/t/p/original/${movie.backDropPath}",
+                                        ),
+                                        fit: BoxFit.cover,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                Positioned(
-                                  bottom: 15,
-                                  left: 0,
-                                  right: 0,
-                                  child: Text(
-                                    movie.title,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    style: const TextStyle(
+                                  Positioned(
+                                    bottom: 15,
+                                    left: 0,
+                                    right: 0,
+                                    child: Text(
+                                      movie.title,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Colors.white),
-                                  ),
-                                )
-                              ],
+                                        fontSize: 18,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              ),
                             );
                           },
                         );

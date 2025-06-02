@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:fp_ppb/screens/detail.dart';
 import 'package:fp_ppb/screens/home.dart';
 import 'package:fp_ppb/screens/login.dart';
 import 'package:fp_ppb/screens/register.dart';
@@ -73,6 +74,11 @@ class MyApp extends StatelessWidget {
           final transactionId = args?['transactionId'] ?? '';
 
           return PaymentScreen(transactionId: transactionId);
+        },
+        'detail': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          final movieId = args?['movieId'] ?? 0;
+          return DetailScreen(movieId: movieId);
         },
       },
     );
