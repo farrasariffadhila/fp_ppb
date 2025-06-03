@@ -144,7 +144,8 @@ class _RentScreenState extends State<RentScreen> {
 
           return Scaffold(
             backgroundColor: Colors.black, // Dark background for the scaffold
-            body: Column(
+            body: SafeArea(
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
@@ -256,6 +257,7 @@ class _RentScreenState extends State<RentScreen> {
                     ],
                   ),
                 ),
+
                 Expanded(
                   child: Container(
                     padding: EdgeInsets.all(16),
@@ -376,6 +378,7 @@ class _RentScreenState extends State<RentScreen> {
                   ),
                 ),
               ],
+              ),
             ),
           );
         } else {
