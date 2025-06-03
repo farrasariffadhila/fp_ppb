@@ -65,7 +65,11 @@ class MyApp extends StatelessWidget {
         'login': (context) => const LoginScreen(),
         'register': (context) => const RegisterScreen(),
         'favourite': (context) => const FavouriteScreen(),
-        'rent': (context) => const RentScreen(),
+        'rent': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          final movieId = args?['movieId'] ?? 0;
+          return RentScreen(movieId: movieId);
+        },
         'wishlist': (context) => const WishlistScreen(),
         'payment': (context) {
           final args = ModalRoute.of(context)?.settings.arguments
@@ -73,7 +77,9 @@ class MyApp extends StatelessWidget {
 
           final transactionId = args?['transactionId'] ?? '';
 
-          return PaymentScreen(transactionId: transactionId);
+          return PaymentScreen(
+            transactionId: transactionId,
+          );
         },
         'detail': (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;

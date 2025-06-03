@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lottie/lottie.dart';
 import 'package:flutter/material.dart';
-import 'login.dart';
+import 'package:fp_ppb/Services/services.dart';
 
 class PaymentScreen extends StatefulWidget {
   final String transactionId;
@@ -15,18 +15,42 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   DocumentSnapshot? _transactionData;
-  bool _isLoading = true;  
+  Map<String, dynamic>? movieDetails;
+  final APIservices _apiServices = APIservices();
+  late int movieId;
+
+  bool _isLoading = true; 
+  bool isLoading = true;  
   bool _showSuccess = false;
 
   @override
   void initState() {
     super.initState();
     _startPaymentProcess();
+    
     if (widget.transactionId.isEmpty) {
       // print('Transaction ID is empty, redirecting to home'); and transactionId
       print('Transaction ID is empty, redirecting to home "${widget.transactionId}" dasda');
     } else {
+      _fetchMovieDetails();
       getTransactionData();  // Fetch transaction data when transactionId is available
+    }
+  }
+
+  Future<void> _fetchMovieDetails() async {
+    try {
+      final details = await _apiServices.getMovieDetails(movieId);
+      
+      final credits = await _apiServices.getMovieCredits(movieId);
+
+      if (credits != null) {
+        setState(() {
+          movieDetails = details;
+        });
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      print('Error fetching movie details: $e');
     }
   }
 
@@ -66,6 +90,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (_transactionData != null && _transactionData!.exists) {
         setState(() {});
       }
+      movieId = _transactionData?['movieId'] ?? '0';
       print('Transaction data: ${_transactionData?.data()}');
     } catch (e) {
       if (!mounted) return;
@@ -75,6 +100,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
+    final posterPath = movieDetails?['poster_path'];
+    final title = movieDetails?['title'] ?? 'No title available';
+    final overview = movieDetails?['overview'] ?? 'No overview available';
+
     return Scaffold(
       body: Stack(
         children: [
@@ -132,11 +170,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             decoration: BoxDecoration(
                               border: Border.all(color: Colors.black, width: 3),
                               color: const Color(0xFFFFFFFF),
-                              image: const DecorationImage(
-                                image: NetworkImage('https://images.tokopedia.net/img/cache/700/product-1/2019/2/21/15258503/15258503_ce050051-1d6c-4ab6-9793-9b27c3dfa2f1_348_528.jpg'),
-                                fit: BoxFit.cover,
-                              ),
                               borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: posterPath != null
+                                  ? Image.network(
+                                      'https://image.tmdb.org/t/p/w500$posterPath',
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Container(
+                                    color: Colors.grey[800],
+                                    child: const Center(
+                                      child: Icon(Icons.movie, color: Colors.white),
+                                    ),
+                                  ),
                             ),
                           ),
                               
@@ -150,7 +198,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                     Container(
                                       alignment: Alignment.topLeft,
                                       child: Text(
-                                        'Rent Item Name',
+                                        title,
                                         style: TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
@@ -162,7 +210,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                     Container(
                                       height: 100,
                                       child: Text(
-                                        'Description of the item goes here. It can be a brief overview of the item being rented.',
+                                        overview,
                                         style: TextStyle(
                                           fontSize: 18,
                                           color: Colors.black, // Lighter text color

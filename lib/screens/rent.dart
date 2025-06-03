@@ -1,10 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:fp_ppb/Services/services.dart';
 import 'login.dart';
 
 class RentScreen extends StatefulWidget {
-  const RentScreen({super.key});
+  final int movieId;
+  
+  const RentScreen({super.key,required this.movieId});
 
   @override
   State<RentScreen> createState() => _RentScreenState();
@@ -18,11 +21,16 @@ class _RentScreenState extends State<RentScreen> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
+  
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final APIservices _apiServices = APIservices();
   
   static const price = 50000;
+
+  Map<String, dynamic>? movieDetails;
   late String userId;
+  bool isLoading = true;
 
   Future<void> getEmail() async {
     User? user = _auth.currentUser;
@@ -46,8 +54,27 @@ class _RentScreenState extends State<RentScreen> {
   void initState() {
     super.initState();
     getEmail();
+    _fetchMovieDetails();
     _startDateController.text = DateTime.now().toLocal().toString().split(' ')[0];
     _endDateController.text = (DateTime.now().add(Duration(days: 1)).toLocal().toString().split(' ')[0]);
+  }
+
+  Future<void> _fetchMovieDetails() async {
+    try {
+      final details = await _apiServices.getMovieDetails(widget.movieId);
+      
+      final credits = await _apiServices.getMovieCredits(widget.movieId);
+
+      if (credits != null) {
+        setState(() {
+          movieDetails = details;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      print('Error fetching movie details: $e');
+    }
   }
 
   void payment(transactionId) {
@@ -62,15 +89,15 @@ class _RentScreenState extends State<RentScreen> {
     if (_formKey.currentState?.validate() ?? false) {
       try {
         // check movie availability
-        DocumentSnapshot movieDoc = await _firestore.collection('movies').doc(movieid).get();
+        DocumentSnapshot movieDoc = await _firestore.collection('movies').doc(movieid.toString()).get();
         if (!movieDoc.exists) {
-          await _firestore.collection('movies').doc(movieid).set({
+          await _firestore.collection('movies').doc(movieid.toString()).set({
             'availableItems': 1,
           });
         } else {
           int availableItems = movieDoc['availableItems'] ?? 0;
           if (availableItems > 0) {
-            await _firestore.collection('movies').doc(movieid).update({
+            await _firestore.collection('movies').doc(movieid.toString()).update({
               'availableItems': availableItems - 1,
             });
           } else {
@@ -124,6 +151,7 @@ class _RentScreenState extends State<RentScreen> {
         _endDateController.clear();
 
       } catch (e) {
+        print('Error adding transaction: $e');
         if (!context.mounted) return;
       }
     }
@@ -131,6 +159,31 @@ class _RentScreenState extends State<RentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
+    if (movieDetails == null) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Text(
+            'Failed to load movie details',
+            style: TextStyle(color: Colors.white, fontSize: 18),
+          ),
+        ),
+      );
+    }
+
+    final posterPath = movieDetails!['poster_path'];
+    final title = movieDetails!['title'] ?? 'Unknown Title';
+    final overview = movieDetails!['overview'] ?? 'No description available';
+    
     return StreamBuilder<User?>(
       stream: _auth.authStateChanges(),
       builder: (context, snapshot) {
@@ -142,131 +195,46 @@ class _RentScreenState extends State<RentScreen> {
           final user = snapshot.data!;
           userId = user.uid;
 
-          return Scaffold(
-            backgroundColor: Colors.black, // Dark background for the scaffold
-            body: SafeArea(
-              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.arrow_back, color: Colors.white), // Change icon color
-                      onPressed: () {
-                        Navigator.pop(context); // Go back to the previous screen
-                      },
-                    ),
-                    SizedBox(width: 16),
-                    Text(
-                      'Rent Details',
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white, // White text color
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  height: 20, 
-                  color: Colors.transparent,
-                  child: const Divider(
-                    color: Colors.white, // White divider color
-                    thickness: 1,
-                    indent: 16,
-                    endIndent: 16,
-                  ),
-                ), 
-                SizedBox(height: 20),
-                Container(
-                  margin: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(25),
-                    boxShadow: [
-                      BoxShadow(
-                        spreadRadius: 2,
-                        blurRadius: 5,
-                        offset: Offset(0, 3),
-                        color: Colors.black45, // Dark shadow
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          return SafeArea(
+            child: Scaffold(
+              backgroundColor: Colors.black, // Dark background for the scaffold
+              body: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Container(
-                        height: 200,
-                        width: 150,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFFFFF),
-                          image: const DecorationImage(
-                            image: NetworkImage('https://images.tokopedia.net/img/cache/700/product-1/2019/2/21/15258503/15258503_ce050051-1d6c-4ab6-9793-9b27c3dfa2f1_348_528.jpg'),
-                            fit: BoxFit.cover,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                      IconButton(
+                        icon: Icon(Icons.arrow_back, color: Colors.white), // Change icon color
+                        onPressed: () {
+                          Navigator.pop(context); // Go back to the previous screen
+                        },
                       ),
-                          
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  alignment: Alignment.topLeft,
-                                  child: Text(
-                                    'Rent Item Name',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white, // White text color
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: 10),
-                                Container(
-                                  height: 100,
-                                  child: Text(
-                                    'Description of the item goes here. It can be a brief overview of the item being rented.',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.white70, // Lighter text color
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: 10),
-                                Container(
-                                  alignment: Alignment.bottomRight,
-                                  child: Text(
-                                    'Price: \$100',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white, // White text color
-                                    ),
-                                    textAlign: TextAlign.end, // Center align the price text
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                      SizedBox(width: 16),
+                      Text(
+                        'Rent Details',
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white, // White text color
                         ),
                       ),
                     ],
                   ),
-                ),
-
-                Expanded(
-                  child: Container(
-                    padding: EdgeInsets.all(16),
+                  Container(
+                    height: 20, 
+                    color: Colors.transparent,
+                    child: const Divider(
+                      color: Colors.white, // White divider color
+                      thickness: 1,
+                      indent: 16,
+                      endIndent: 16,
+                    ),
+                  ), 
+                  SizedBox(height: 20),
+                  Container(
+                    margin: EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(25),
-                        topRight: Radius.circular(25),
-                      ),
-                      color: Colors.grey[900], // Dark background for the form container
+                      borderRadius: BorderRadius.circular(25),
                       boxShadow: [
                         BoxShadow(
                           spreadRadius: 2,
@@ -276,108 +244,208 @@ class _RentScreenState extends State<RentScreen> {
                         ),
                       ],
                     ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Please fill in the details below to proceed with your rental.',
-                            style: TextStyle(fontSize: 18, color: Colors.white70),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          height: 180,
+                          width: 120,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFFFF),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                SizedBox(height: 16),
-                                SizedBox(height: 2),
-                                _buildTextField(_nameController, 'Name'),
-                                SizedBox(height: 16),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 8.0),
-                                        child: _buildTextField(_emailController, 'Email'),
+                          child: posterPath != null
+                                  ? Image.network(
+                                      'https://image.tmdb.org/t/p/w342$posterPath',
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          color: Colors.grey[800],
+                                          child: const Center(
+                                            child: Icon(Icons.broken_image, 
+                                                color: Colors.white24),
+                                          ),
+                                        );
+                                      },
+                                    )
+                                    : Container(
+                                      color: Colors.grey[800],
+                                      child: const Center(
+                                        child: Icon(Icons.movie, color: Colors.white),
                                       ),
                                     ),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(left: 8.0),
-                                        child: _buildTextField(_phoneController, 'Phone'),
+                        ),
+                            
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    alignment: Alignment.topLeft,
+                                    child: Text(
+                                      title,
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white, // White text color
                                       ),
                                     ),
-                                  ],
-                                ),
-                                SizedBox(height: 16),
-                                _buildTextField(_addressController, 'Address'),
-                                SizedBox(height: 16),
-                                  Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 8.0),
-                                        child:_buildDatePicker('Start Date', _startDateController, (date) {
-                                        setState(() {
-                                          _startDate = date;
-                                        });
-                                        }
+                                  ),
+                                  SizedBox(height: 10),
+                                  Container(
+                                    height: 100,
+                                    child: Text(
+                                      overview,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.white70, // Lighter text color
                                       ),
                                     ),
-                                    ),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(left: 8.0),
-                                        child: _buildDatePicker('End Date', _endDateController, (date) {
-                                          setState(() {
-                                            _endDate = date;
-                                          });
-                                        }
-                                        ),
+                                  ),
+                                  SizedBox(height: 10),
+                                  Container(
+                                    alignment: Alignment.bottomRight,
+                                    child: Text(
+                                      'Price: Rp ${formatNumber(price)}',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white, // White text color
                                       ),
+                                      textAlign: TextAlign.end, // Center align the price text
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: 20),
-                          Divider(
-                            color: Colors.white, // White divider color
-                            thickness: 1,
-                          ),
-                          SizedBox(height: 10),
-                          Container(
-                            alignment: Alignment.bottomRight,
-                            child: Text(
-                              'Total Price: Rp ${_startDate != null && _endDate != null ? formatNumber(price * (_endDate!.difference(_startDate!).inDays)) : '0'}',
-                              style: TextStyle(fontSize: 20, color: Colors.white70),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          SizedBox(height: 15),
-                          Container(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                if (_formKey.currentState?.validate() ?? false) {
-                                  addTransaction('rent_item_id'); // Replace with actual movie ID
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blueAccent, // Button color
-                                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                                  ),
+                                ],
                               ),
-                              child: Text('Submit', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                             ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(25),
+                          topRight: Radius.circular(25),
+                        ),
+                        color: Colors.grey[900], // Dark background for the form container
+                        boxShadow: [
+                          BoxShadow(
+                            spreadRadius: 2,
+                            blurRadius: 5,
+                            offset: Offset(0, 3),
+                            color: Colors.black45, // Dark shadow
                           ),
                         ],
                       ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Please fill in the details below to proceed with your rental.',
+                              style: TextStyle(fontSize: 18, color: Colors.white70),
+                            ),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  SizedBox(height: 16),
+                                  SizedBox(height: 2),
+                                  _buildTextField(_nameController, 'Name'),
+                                  SizedBox(height: 16),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(right: 8.0),
+                                          child: _buildTextField(_emailController, 'Email'),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(left: 8.0),
+                                          child: _buildTextField(_phoneController, 'Phone'),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 16),
+                                  _buildTextField(_addressController, 'Address'),
+                                  SizedBox(height: 16),
+                                    Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(right: 8.0),
+                                          child:_buildDatePicker('Start Date', _startDateController, (date) {
+                                          setState(() {
+                                            _startDate = date;
+                                          });
+                                          }
+                                        ),
+                                      ),
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(left: 8.0),
+                                          child: _buildDatePicker('End Date', _endDateController, (date) {
+                                            setState(() {
+                                              _endDate = date;
+                                            });
+                                          }
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: 20),
+                            Divider(
+                              color: Colors.white, // White divider color
+                              thickness: 1,
+                            ),
+                            SizedBox(height: 10),
+                            Container(
+                              alignment: Alignment.bottomRight,
+                              child: Text(
+                                'Total Price: Rp ${_startDate != null && _endDate != null ? formatNumber(price * (_endDate!.difference(_startDate!).inDays)) : '0'}',
+                                style: TextStyle(fontSize: 20, color: Colors.white70),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            SizedBox(height: 15),
+                            Container(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  if (_formKey.currentState?.validate() ?? false) {
+                                    addTransaction(widget.movieId);
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent, // Button color
+                                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                                ),
+                                child: Text('Submit', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
               ),
             ),
           );

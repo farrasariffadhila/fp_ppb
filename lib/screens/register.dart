@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -11,6 +12,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
   String _errorCode = "";
@@ -36,6 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: _emailController.text,
         password: _passwordController.text,
       );
+      await _addUserToFirebase(_emailController.text);
       navigateLogin();
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -45,6 +48,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() {
       _isLoading = false;
+    });
+  }
+
+  Future<void> _addUserToFirebase(email) async {
+    final user = FirebaseAuth.instance.currentUser;
+    await _firestore.collection('users').doc(user?.uid).set({
+      'email': email,
+      'createdAt': FieldValue.serverTimestamp(),
+      'isAdmin': false,
     });
   }
 
