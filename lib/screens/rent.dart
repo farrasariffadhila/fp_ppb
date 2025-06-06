@@ -47,6 +47,11 @@ class _RentScreenState extends State<RentScreen> {
     return number.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.');
   }
 
+  String formatDate(DateTime date) {
+    // D/M/YYYY format
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
   DateTime? _startDate;
   DateTime? _endDate;
 
@@ -55,8 +60,8 @@ class _RentScreenState extends State<RentScreen> {
     super.initState();
     getEmail();
     _fetchMovieDetails();
-    _startDateController.text = DateTime.now().toLocal().toString().split(' ')[0];
-    _endDateController.text = (DateTime.now().add(Duration(days: 1)).toLocal().toString().split(' ')[0]);
+    _startDateController.text = formatDate(DateTime.now().toLocal());
+    _endDateController.text = formatDate(DateTime.now().toLocal().add(const Duration(days: 1)));
   }
 
   Future<void> _fetchMovieDetails() async {
@@ -81,6 +86,7 @@ class _RentScreenState extends State<RentScreen> {
     // push transaction id to payment screen
     Navigator.pushReplacementNamed(context, 'payment', arguments:{
       'transactionId': transactionId,
+      'movieId': widget.movieId,
     });
   }
      
@@ -419,7 +425,7 @@ class _RentScreenState extends State<RentScreen> {
                             Container(
                               alignment: Alignment.bottomRight,
                               child: Text(
-                                'Total Price: Rp ${_startDate != null && _endDate != null ? formatNumber(price * (_endDate!.difference(_startDate!).inDays)) : '0'}',
+                                'Total Price: Rp ${_startDate != null && _endDate != null ? formatNumber(price * (_endDate!.difference(_startDate!).inDays)) : formatNumber(price)}',
                                 style: TextStyle(fontSize: 20, color: Colors.white70),
                                 textAlign: TextAlign.center,
                               ),

@@ -76,9 +76,11 @@ class MyApp extends StatelessWidget {
           as Map<String, dynamic>?;
 
           final transactionId = args?['transactionId'] ?? '';
+          final movieId = args?['movieId'] ?? 0;
 
           return PaymentScreen(
             transactionId: transactionId,
+            movieId: movieId,
           );
         },
         'detail': (context) {
