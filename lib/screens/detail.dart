@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lottie/lottie.dart';
 import 'package:fp_ppb/Services/services.dart';
 
 class DetailScreen extends StatefulWidget {
@@ -18,6 +19,8 @@ class _DetailScreenState extends State<DetailScreen> {
   bool isLoading = true;
   bool isFavorite = false;
   bool isInWishlist = false;
+  int wishlistCount = 0;
+
   
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -28,6 +31,20 @@ class _DetailScreenState extends State<DetailScreen> {
     super.initState();
     _fetchMovieDetails();
     _checkFavoriteAndWishlistStatus();
+    _getWishlistCount();
+  }
+
+  Future<void> _getWishlistCount() async {
+    try {
+      final count = await _apiServices.getWishlistCount(widget.movieId);
+      if (mounted) {
+        setState(() {
+          wishlistCount = count;
+        });
+      }
+    } catch (e) {
+      print('Error getting wishlist count: $e');
+    }
   }
 
   Future<void> _fetchMovieDetails() async {
@@ -114,6 +131,7 @@ class _DetailScreenState extends State<DetailScreen> {
     } catch (e) {
       print('Wishlist error: $e');
     }
+    _getWishlistCount();
   }
 
   String _formatRuntime(int minutes) {
@@ -140,24 +158,92 @@ class _DetailScreenState extends State<DetailScreen> {
     );
   }
 
+  Widget _buildLoadingScreen() {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Lottie.asset(
+              'assets/animation/loading.json',
+              width: 200,
+              height: 200,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Loading Movie Details...',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: 200,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[800],
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  backgroundColor: Colors.transparent,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[400]!),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
-      );
+      return _buildLoadingScreen();
     }
 
     if (movieDetails == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: Text(
-            'Failed to load movie details',
-            style: TextStyle(color: Colors.white, fontSize: 18),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Lottie.asset(
+                'assets/lottie/error_animation.json', // Add error animation
+                width: 150,
+                height: 150,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Failed to load movie details',
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    isLoading = true;
+                  });
+                  _fetchMovieDetails();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: const Text(
+                  'Retry',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -319,6 +405,16 @@ class _DetailScreenState extends State<DetailScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   _buildStarRating(rating),
+                                  const SizedBox(width: 16),
+                                  Icon(Icons.bookmark, color: Colors.blue, size: 20),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$wishlistCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
@@ -421,11 +517,7 @@ class _DetailScreenState extends State<DetailScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, 'rent', arguments: {
-                          'movieId': widget.movieId,
-                        });
-                      },
+                      onPressed: () {},
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blueAccent,
                         padding: const EdgeInsets.symmetric(vertical: 16),
