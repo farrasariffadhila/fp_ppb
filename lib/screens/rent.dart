@@ -61,7 +61,9 @@ class _RentScreenState extends State<RentScreen> {
     getEmail();
     _fetchMovieDetails();
     _startDateController.text = formatDate(DateTime.now().toLocal());
+    _startDate = DateTime.now().toLocal();
     _endDateController.text = formatDate(DateTime.now().toLocal().add(const Duration(days: 1)));
+    _endDate = DateTime.now().toLocal().add(const Duration(days: 1));
   }
 
   Future<void> _fetchMovieDetails() async {
@@ -131,6 +133,7 @@ class _RentScreenState extends State<RentScreen> {
         // create ref of the transaction from time now
         final now = DateTime.now();
         final transactionRef = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}${now.millisecond.toString().padLeft(3, '0')}';
+        // 
         // Add transaction to Firestore
         DocumentReference transactionDocRef = await _firestore.collection('transactions').add({
           'userId': userId,
@@ -140,7 +143,7 @@ class _RentScreenState extends State<RentScreen> {
           'address': _addressController.text,
           'startDate': _startDateController.text,
           'endDate': _endDateController.text,
-          'totalPrice': price * (_endDate != null && _startDate != null ? _endDate!.difference(_startDate!).inDays : 0),
+          'totalPrice': price * (_endDate!.difference(_startDate!).inDays),
           'transactionId': transactionRef,
           'movieId': movieid,
         });

@@ -517,7 +517,11 @@ class _DetailScreenState extends State<DetailScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pushNamed(context, 'rent', arguments: {
+                          'movieId': widget.movieId,
+                        });
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blueAccent,
                         padding: const EdgeInsets.symmetric(vertical: 16),
