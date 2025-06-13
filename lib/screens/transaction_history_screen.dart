@@ -75,7 +75,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               final String? posterPath = transaction['posterPath'];
               final String startDate = transaction['startDate'] ?? 'N/A';
               final String status = transaction['status'] ?? 'N/A';
-              final int totalPrice = transaction['totalPrice'] ?? 0;
+              final int totalPrice = (transaction['totalPrice'] as num?)?.toInt() ?? 0;
 
               Color statusColor;
               switch (status) {

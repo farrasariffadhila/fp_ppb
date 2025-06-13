@@ -3,6 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fp_ppb/Services/services.dart';
 import 'login.dart';
+import '../Model/voucher.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'dart:math';
 
 class RentScreen extends StatefulWidget {
   final int movieId;
@@ -21,12 +25,15 @@ class _RentScreenState extends State<RentScreen> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
+  final TextEditingController _voucherController = TextEditingController();
   
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final APIservices _apiServices = APIservices();
   
   static const price = 50000;
+  Voucher? _appliedVoucher;
+  double _discountedPrice = 0;
 
   Map<String, dynamic>? movieDetails;
   late String userId;
@@ -93,45 +100,91 @@ class _RentScreenState extends State<RentScreen> {
   }
      
 
+  Future<void> _applyVoucher() async {
+    if (_voucherController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a voucher code')),
+      );
+      return;
+    }
+
+    try {
+      final voucherQuery = await _firestore
+          .collection('vouchers')
+          .where('code', isEqualTo: _voucherController.text.toUpperCase())
+          .get();
+
+      if (voucherQuery.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid voucher code')),
+        );
+        return;
+      }
+
+      final voucher = Voucher.fromDocument(voucherQuery.docs.first);
+      
+      if (!voucher.isValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Voucher is expired or has been used')),
+        );
+        return;
+      }
+
+      setState(() {
+        _appliedVoucher = voucher;
+        _discountedPrice = price * (_endDate!.difference(_startDate!).inDays) * (1 - voucher.discountPercentage / 100);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Voucher applied successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error applying voucher: $e')),
+      );
+    }
+  }
+
   void addTransaction(movieid) async {
     if (_formKey.currentState?.validate() ?? false) {
       try {
-        // create ref of the transaction from time now
         final now = DateTime.now();
         final transactionRef = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}${now.millisecond.toString().padLeft(3, '0')}';
         
-        // Add transaction to Firestore
+        final originalPrice = price * (_endDate!.difference(_startDate!).inDays);
+        final finalPrice = _appliedVoucher != null ? _discountedPrice.toInt() : originalPrice;
+        
         DocumentReference transactionDocRef = await _firestore.collection('transactions').add({
           'userId': userId,
           'movieId': movieid,
-          'movieTitle': movieDetails!['title'] ?? 'Unknown Movie', // Add movieTitle
-          'posterPath': movieDetails!['poster_path'], // Add posterPath
+          'movieTitle': movieDetails!['title'] ?? 'Unknown Movie',
+          'posterPath': movieDetails!['poster_path'],
           'name': _nameController.text,
           'email': _emailController.text,
           'phone': _phoneController.text,
           'address': _addressController.text,
           'startDate': _startDateController.text,
           'endDate': _endDateController.text,
-          'totalPrice': price * (_endDate!.difference(_startDate!).inDays),
+          'totalPrice': finalPrice,
+          'originalPrice': originalPrice,
           'transactionId': transactionRef,
-          'status': 'waiting for confirmation', // Default status
+          'status': 'waiting for confirmation',
+          'voucherCode': _appliedVoucher?.code,
+          'discountApplied': _appliedVoucher != null ? _appliedVoucher!.discountPercentage : 0,
         });
 
-        // Pass the generated transaction ID to the payment method
-        payment(transactionDocRef.id);
+        if (_appliedVoucher != null) {
+          await _firestore
+              .collection('vouchers')
+              .doc(_appliedVoucher!.id)
+              .update({'isUsed': true});
+        }
 
-        // clear the form fields (optional, if navigation handles it)
-        // _nameController.clear();
-        // _emailController.clear();
-        // _phoneController.clear();
-        // _addressController.clear();
-        // _startDateController.clear();
-        // _endDateController.clear();
+        payment(transactionDocRef.id);
 
       } catch (e) {
         print('Error adding transaction: $e');
         if (!context.mounted) return;
-        // Optionally show a user-friendly error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error adding transaction: ${e.toString()}')),
         );
@@ -183,6 +236,7 @@ class _RentScreenState extends State<RentScreen> {
               body: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Bagian Header dan Detail Film (Statis)
                   Row(
                     children: [
                       IconButton(
@@ -203,7 +257,7 @@ class _RentScreenState extends State<RentScreen> {
                     ],
                   ),
                   Container(
-                    height: 20, 
+                    height: 20,
                     color: Colors.transparent,
                     child: const Divider(
                       color: Colors.white, // White divider color
@@ -211,7 +265,7 @@ class _RentScreenState extends State<RentScreen> {
                       indent: 16,
                       endIndent: 16,
                     ),
-                  ), 
+                  ),
                   SizedBox(height: 20),
                   Container(
                     margin: EdgeInsets.all(16),
@@ -237,192 +291,266 @@ class _RentScreenState extends State<RentScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: posterPath != null
-                                  ? Image.network(
-                                      'https://image.tmdb.org/t/p/w342$posterPath',
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Container(
-                                          color: Colors.grey[800],
-                                          child: const Center(
-                                            child: Icon(Icons.broken_image, 
-                                                color: Colors.white24),
-                                          ),
-                                        );
-                                      },
-                                    )
-                                    : Container(
+                              ? Image.network(
+                                  'https://image.tmdb.org/t/p/w342$posterPath',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
                                       color: Colors.grey[800],
                                       child: const Center(
-                                        child: Icon(Icons.movie, color: Colors.white),
+                                        child: Icon(Icons.broken_image,
+                                            color: Colors.white24),
                                       ),
-                                    ),
+                                    );
+                                  },
+                                )
+                              : Container(
+                                  color: Colors.grey[800],
+                                  child: const Center(
+                                    child: Icon(Icons.movie, color: Colors.white),
+                                  ),
+                                ),
                         ),
-                            
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    alignment: Alignment.topLeft,
-                                    child: Text(
-                                      title,
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white, // White text color
-                                      ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  alignment: Alignment.topLeft,
+                                  child: Text(
+                                    title,
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white, // White text color
                                     ),
                                   ),
-                                  SizedBox(height: 10),
-                                  Container(
-                                    height: 100,
-                                    child: Text(
-                                      overview,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: Colors.white70, // Lighter text color
-                                      ),
+                                ),
+                                SizedBox(height: 10),
+                                Container(
+                                  height: 100,
+                                  child: Text(
+                                    overview,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.white70, // Lighter text color
                                     ),
                                   ),
-                                  SizedBox(height: 10),
-                                  Container(
-                                    alignment: Alignment.bottomRight,
-                                    child: Text(
-                                      'Price: Rp ${formatNumber(price)}',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white, // White text color
-                                      ),
-                                      textAlign: TextAlign.end, // Center align the price text
+                                ),
+                                SizedBox(height: 10),
+                                Container(
+                                  alignment: Alignment.bottomRight,
+                                  child: Text(
+                                    'Price: Rp ${formatNumber(price)}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white, // White text color
                                     ),
+                                    textAlign: TextAlign.end, // Center align the price text
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
+                  // Bagian Form dan Voucher (Dapat di-scroll)
                   Expanded(
-                    child: Container(
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(25),
-                          topRight: Radius.circular(25),
-                        ),
-                        color: Colors.grey[900], // Dark background for the form container
-                        boxShadow: [
-                          BoxShadow(
-                            spreadRadius: 2,
-                            blurRadius: 5,
-                            offset: Offset(0, 3),
-                            color: Colors.black45, // Dark shadow
+                    child: SingleChildScrollView(
+                      child: Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(25),
+                            topRight: Radius.circular(25),
                           ),
-                        ],
-                      ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Please fill in the details below to proceed with your rental.',
-                              style: TextStyle(fontSize: 18, color: Colors.white70),
+                          color: Colors.grey[900], // Dark background for the form container
+                          boxShadow: [
+                            BoxShadow(
+                              spreadRadius: 2,
+                              blurRadius: 5,
+                              offset: Offset(0, 3),
+                              color: Colors.black45, // Dark shadow
                             ),
-                            Expanded(
-                              child: Column(
+                          ],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Please fill in the details below to proceed with your rental.',
+                                style: TextStyle(fontSize: 18, color: Colors.white70),
+                              ),
+                              SizedBox(height: 16),
+                              _buildTextField(_nameController, 'Name'),
+                              SizedBox(height: 16),
+                              Row(
                                 children: [
-                                  SizedBox(height: 16),
-                                  SizedBox(height: 2),
-                                  _buildTextField(_nameController, 'Name'),
-                                  SizedBox(height: 16),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(right: 8.0),
-                                          child: _buildTextField(_emailController, 'Email'),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(left: 8.0),
-                                          child: _buildTextField(_phoneController, 'Phone'),
-                                        ),
-                                      ),
-                                    ],
+                                  Expanded(
+                                    child: _buildTextField(_emailController, 'Email'),
                                   ),
-                                  SizedBox(height: 16),
-                                  _buildTextField(_addressController, 'Address'),
-                                  SizedBox(height: 16),
-                                    Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(right: 8.0),
-                                          child:_buildDatePicker('Start Date', _startDateController, (date) {
-                                          setState(() {
-                                            _startDate = date;
-                                          });
-                                          }
-                                        ),
-                                      ),
-                                      ),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(left: 8.0),
-                                          child: _buildDatePicker('End Date', _endDateController, (date) {
-                                            setState(() {
-                                              _endDate = date;
-                                            });
-                                          }
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  SizedBox(width: 16), // Jarak antara Email dan Phone
+                                  Expanded(
+                                    child: _buildTextField(_phoneController, 'Phone'),
                                   ),
                                 ],
                               ),
-                            ),
-                            SizedBox(height: 20),
-                            Divider(
-                              color: Colors.white, // White divider color
-                              thickness: 1,
-                            ),
-                            SizedBox(height: 10),
-                            Container(
-                              alignment: Alignment.bottomRight,
-                              child: Text(
-                                'Total Price: Rp ${_startDate != null && _endDate != null ? formatNumber(price * (_endDate!.difference(_startDate!).inDays)) : formatNumber(price)}',
-                                style: TextStyle(fontSize: 20, color: Colors.white70),
-                                textAlign: TextAlign.center,
+                              SizedBox(height: 16),
+                              _buildTextField(_addressController, 'Address'),
+                              SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildDatePicker('Start Date', _startDateController, (date) {
+                                      setState(() {
+                                        _startDate = date;
+                                      });
+                                    }),
+                                  ),
+                                  SizedBox(width: 16), // Jarak antara Start Date dan End Date
+                                  Expanded(
+                                    child: _buildDatePicker('End Date', _endDateController, (date) {
+                                      setState(() {
+                                        _endDate = date;
+                                      });
+                                    }),
+                                  ),
+                                ],
                               ),
-                            ),
-                            SizedBox(height: 15),
-                            Container(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  if (_formKey.currentState?.validate() ?? false) {
-                                    addTransaction(widget.movieId);
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blueAccent, // Button color
-                                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                              SizedBox(height: 20),
+                              Divider(
+                                color: Colors.white,
+                                thickness: 1,
+                              ),
+                              SizedBox(height: 10),
+                              // Apply Voucher section
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Apply Voucher',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _voucherController,
+                                          style: const TextStyle(color: Colors.white),
+                                          maxLength: 6,
+                                          decoration: InputDecoration(
+                                            labelText: 'Voucher Code',
+                                            labelStyle: const TextStyle(color: Colors.white70),
+                                            counterText: '',
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: const BorderSide(color: Colors.white54),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: const BorderSide(color: Colors.white),
+                                            ),
+                                          ),
+                                          textCapitalization: TextCapitalization.characters,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        icon: const Icon(Icons.paste, color: Colors.white),
+                                        onPressed: () async {
+                                          final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+                                          if (clipboardData != null && clipboardData.text != null) {
+                                            setState(() {
+                                              _voucherController.text = clipboardData.text!.substring(0, min(clipboardData.text!.length, 6));
+                                            });
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(width: 8),
+                                      ElevatedButton(
+                                        onPressed: _applyVoucher,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.blue,
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: const Text('Apply'),
+                                      ),
+                                    ],
+                                  ),
+                                  if (_appliedVoucher != null) ...[
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.check_circle, color: Colors.green),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Voucher applied: ${_appliedVoucher!.discountPercentage}% off',
+                                            style: const TextStyle(color: Colors.green),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              SizedBox(height: 20),
+                              Divider(
+                                color: Colors.white,
+                                thickness: 1,
+                              ),
+                              SizedBox(height: 10),
+                              Container(
+                                alignment: Alignment.bottomRight,
+                                child: Text(
+                                  'Total Price: Rp ${_startDate != null && _endDate != null ? formatNumber(_appliedVoucher != null ? _discountedPrice.toInt() : price * (_endDate!.difference(_startDate!).inDays)) : formatNumber(price)}',
+                                  style: TextStyle(fontSize: 20, color: Colors.white70),
+                                  textAlign: TextAlign.center,
                                 ),
-                                child: Text('Submit', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                               ),
-                            ),
-                          ],
+                              SizedBox(height: 15),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () => addTransaction(widget.movieId),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Submit',
+                                    style: TextStyle(fontSize: 18, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -530,5 +658,17 @@ class _RentScreenState extends State<RentScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _startDateController.dispose();
+    _endDateController.dispose();
+    _voucherController.dispose();
+    super.dispose();
   }
 }

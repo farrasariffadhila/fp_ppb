@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../Model/transaction.dart';
 import 'admin_profile_screen.dart';
 import 'admin_history_screen.dart';
+import 'admin_voucher_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -107,6 +108,18 @@ class _AdminScreenState extends State<AdminScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => AdminHistoryScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.card_giftcard),
+              title: const Text('Voucher Management'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdminVoucherScreen(),
                   ),
                 );
               },

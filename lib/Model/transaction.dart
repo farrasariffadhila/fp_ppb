@@ -40,7 +40,7 @@ class TransactionModel {
       name: data['name'] ?? '',
       phone: data['phone'] ?? '',
       startDate: data['startDate'] ?? '',
-      totalPrice: data['totalPrice'] ?? 0,
+      totalPrice: (data['totalPrice'] as num?)?.toInt() ?? 0,
       transactionId: data['transactionId']?.toString() ?? '',
       userId: data['userID'] ?? '',
       status: data['status'] ?? 'waiting for confirmation',
