@@ -19,7 +19,7 @@ class APIservices {
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body)['results'];
-      return data.map((movie) => Movie.fromMap(movie)).toList();
+      return data.map((movie) => Movie.fromJson(movie)).toList();
     } else {
       throw Exception("Failed to load now showing movies");
     }
@@ -31,7 +31,7 @@ class APIservices {
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body)['results'];
-      return data.map((movie) => Movie.fromMap(movie)).toList();
+      return data.map((movie) => Movie.fromJson(movie)).toList();
     } else {
       throw Exception("Failed to load upcoming movies");
     }
@@ -43,9 +43,23 @@ class APIservices {
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body)['results'];
-      return data.map((movie) => Movie.fromMap(movie)).toList();
+      return data.map((movie) => Movie.fromJson(movie)).toList();
     } else {
       throw Exception("Failed to load popular movies");
+    }
+  }
+
+  Future<List<Movie>> searchMovies(String query) async {
+    final url = Uri.parse(
+      "https://api.themoviedb.org/3/search/movie?api_key=$apiKey&query=$query"
+    );
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body)['results'];
+      return data.map((movie) => Movie.fromJson(movie)).toList();
+    } else {
+      throw Exception("Failed to search movies");
     }
   }
 
@@ -86,6 +100,7 @@ class APIservices {
           title: movieDetail['title'],
           backDropPath: movieDetail['backdrop_path'] ?? '',
           posterPath: movieDetail['poster_path'],
+          overview: movieDetail['overview'] ?? '',
         ));
       } catch (e) {
         print('Failed to load movie $id: $e');
@@ -95,7 +110,7 @@ class APIservices {
     return movies;
   }
 
-    Future<int> getWishlistCount(int movieId) async {
+  Future<int> getWishlistCount(int movieId) async {
     try {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('users')

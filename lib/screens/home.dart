@@ -5,6 +5,8 @@ import 'package:fp_ppb/Services/services.dart';
 import '../Model/model.dart';
 import 'detail.dart';
 import 'login.dart';
+import 'movie_search_screen.dart';
+import 'transaction_history_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -71,11 +73,12 @@ class _HomeScreenState extends State<HomeScreen> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.search_rounded),
-                onPressed: () {}, // implement search if needed
-              ),
-              IconButton(
-                icon: const Icon(Icons.notifications),
-                onPressed: () {}, // implement notification if needed
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const MovieSearchScreen()),
+                  );
+                },
               ),
               const SizedBox(width: 10),
             ],
@@ -105,8 +108,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.house, color: Colors.white),
-                  title: const Text('Rent', style: TextStyle(color: Colors.white)),
-                  onTap: () => Navigator.pushNamed(context, 'rent'),
+                  title: const Text('Transaction', style: TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TransactionHistoryScreen())),
                 ),
                 ListTile(
                   leading: const Icon(Icons.check, color: Colors.white),

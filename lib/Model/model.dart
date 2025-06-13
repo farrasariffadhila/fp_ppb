@@ -3,20 +3,23 @@ class Movie {
   final String title;
   final String backDropPath;
   final String? posterPath;
+  final String overview;
 
   Movie({
      required this.id,
     required this.title,
     required this.backDropPath,
     this.posterPath,
+    required this.overview,
   });
 
-  factory Movie.fromMap(Map<String, dynamic> map) {
+  factory Movie.fromJson(Map<String, dynamic> json) {
     return Movie(
-      id: map['id'],
-      title: map['title'],
-      backDropPath: map['backdrop_path'] ?? '',
-      posterPath: map['poster_path'],
+      id: json['id'] as int,
+      title: json['title'] as String,
+      backDropPath: json['backdrop_path'] as String? ?? '',
+      posterPath: json['poster_path'] as String?,
+      overview: json['overview'] as String? ?? '',
     );
   }
 
@@ -26,6 +29,7 @@ class Movie {
       'title': title,
       'backDropPath': backDropPath,
       'posterPath': posterPath, 
+      'overview': overview,
     };
   }
 }

@@ -96,47 +96,16 @@ class _RentScreenState extends State<RentScreen> {
   void addTransaction(movieid) async {
     if (_formKey.currentState?.validate() ?? false) {
       try {
-        // check movie availability
-        DocumentSnapshot movieDoc = await _firestore.collection('movies').doc(movieid.toString()).get();
-        if (!movieDoc.exists) {
-          await _firestore.collection('movies').doc(movieid.toString()).set({
-            'availableItems': 1,
-          });
-        } else {
-          int availableItems = movieDoc['availableItems'] ?? 0;
-          if (availableItems > 0) {
-            await _firestore.collection('movies').doc(movieid.toString()).update({
-              'availableItems': availableItems - 1,
-            });
-          } else {
-            if (!context.mounted) return;
-            // create popup dialog to inform user that there are no available items
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text('No Available Items'),
-                content: Text('Sorry, there are no available items for rent at the moment.'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Text('OK'),
-                  ),
-                ],
-              ),
-            );
-            return;
-          }
-        }
-
         // create ref of the transaction from time now
         final now = DateTime.now();
         final transactionRef = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}${now.millisecond.toString().padLeft(3, '0')}';
-        // 
+        
         // Add transaction to Firestore
         DocumentReference transactionDocRef = await _firestore.collection('transactions').add({
           'userId': userId,
+          'movieId': movieid,
+          'movieTitle': movieDetails!['title'] ?? 'Unknown Movie', // Add movieTitle
+          'posterPath': movieDetails!['poster_path'], // Add posterPath
           'name': _nameController.text,
           'email': _emailController.text,
           'phone': _phoneController.text,
@@ -145,23 +114,27 @@ class _RentScreenState extends State<RentScreen> {
           'endDate': _endDateController.text,
           'totalPrice': price * (_endDate!.difference(_startDate!).inDays),
           'transactionId': transactionRef,
-          'movieId': movieid,
+          'status': 'waiting for confirmation', // Default status
         });
 
         // Pass the generated transaction ID to the payment method
         payment(transactionDocRef.id);
 
-        // clear the form fields
-        _nameController.clear();
-        _emailController.clear();
-        _phoneController.clear();
-        _addressController.clear();
-        _startDateController.clear();
-        _endDateController.clear();
+        // clear the form fields (optional, if navigation handles it)
+        // _nameController.clear();
+        // _emailController.clear();
+        // _phoneController.clear();
+        // _addressController.clear();
+        // _startDateController.clear();
+        // _endDateController.clear();
 
       } catch (e) {
         print('Error adding transaction: $e');
         if (!context.mounted) return;
+        // Optionally show a user-friendly error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding transaction: ${e.toString()}')),
+        );
       }
     }
   }

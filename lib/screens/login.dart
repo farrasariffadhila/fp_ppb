@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'admin_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -32,11 +34,34 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
-      navigateHome();
+      // Ambil data user dari Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: _emailController.text)
+          .limit(1)
+          .get();
+      if (userDoc.docs.isNotEmpty) {
+        final userData = userDoc.docs.first.data();
+        final isAdmin = userData['isAdmin'] ?? false;
+        if (isAdmin == true) {
+          if (!context.mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AdminScreen(adminEmail: _emailController.text),
+            ),
+          );
+        } else {
+          navigateHome();
+        }
+      } else {
+        // Jika user tidak ditemukan di Firestore, tetap ke home
+        navigateHome();
+      }
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorCode = e.code;
