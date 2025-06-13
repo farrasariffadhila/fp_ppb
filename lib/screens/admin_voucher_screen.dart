@@ -162,7 +162,21 @@ class _AdminVoucherScreenState extends State<AdminVoucherScreen> {
 
                       return Card(
                         child: ListTile(
-                          title: Text('Code: ${data['code']}'),
+                          title: Row(
+                            children: [
+                              Text('Code: ${data['code']}'),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.copy, size: 20),
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: data['code']));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Voucher code copied to clipboard')),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                           subtitle: Text(
                             'Expires: ${expiryDate.toString().split(' ')[0]}\n'
                             'Status: ${data['isUsed'] ? 'Used' : 'Available'}',
