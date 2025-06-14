@@ -95,80 +95,88 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   statusColor = Colors.grey;
               }
 
-              return Card(
-                color: Colors.grey[900],
-                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Row(
-                    children: [
-                      if (posterPath != null)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8.0),
-                          child: Image.network(
-                            'https://image.tmdb.org/t/p/w200$posterPath',
+              return GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, 'payment', arguments: {
+                    'transactionId': transactions[index].id,
+                    'movieId': transaction['movieId'],
+                  });
+                },
+                child: Card(
+                  color: Colors.grey[900],
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Row(
+                      children: [
+                        if (posterPath != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8.0),
+                            child: Image.network(
+                              'https://image.tmdb.org/t/p/w200$posterPath',
+                              width: 80,
+                              height: 120,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 80,
+                                  height: 120,
+                                  color: Colors.grey[800],
+                                  child: const Icon(Icons.movie, color: Colors.white54),
+                                );
+                              },
+                            ),
+                          )
+                        else
+                          Container(
                             width: 80,
                             height: 120,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                width: 80,
-                                height: 120,
-                                color: Colors.grey[800],
-                                child: const Icon(Icons.movie, color: Colors.white54),
-                              );
-                            },
+                            color: Colors.grey[800],
+                            child: const Icon(Icons.movie, color: Colors.white54),
                           ),
-                        )
-                      else
-                        Container(
-                          width: 80,
-                          height: 120,
-                          color: Colors.grey[800],
-                          child: const Icon(Icons.movie, color: Colors.white54),
+                        const SizedBox(width: 12.0),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                movieTitle,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4.0),
+                              Text(
+                                'Status: $status',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4.0),
+                              Text(
+                                'Start Date: $startDate',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                              const SizedBox(height: 4.0),
+                              Text(
+                                'Total Price: Rp ${totalPrice.toString()}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      const SizedBox(width: 12.0),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              movieTitle,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4.0),
-                            Text(
-                              'Status: $status',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: statusColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 4.0),
-                            Text(
-                              'Start Date: $startDate',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white70,
-                              ),
-                            ),
-                            const SizedBox(height: 4.0),
-                            Text(
-                              'Total Price: Rp ${totalPrice.toString()}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );

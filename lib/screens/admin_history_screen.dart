@@ -48,6 +48,8 @@ class AdminHistoryScreen extends StatelessWidget {
       String movieTitle = 'Unknown Movie'; // Default fallback
       String startDate = 'N/A';
       String endDate = 'N/A';
+      int movieId = 0; // Default fallback for movieId
+      String transactionId = 'N/A';
 
       if (data != null) {
         // Ambil judul film dari koleksi movies via TMDB API
@@ -63,12 +65,19 @@ class AdminHistoryScreen extends StatelessWidget {
         if (data.containsKey('endDate') && data['endDate'] != null) {
           endDate = data['endDate'].toString();
         }
+        if (data.containsKey('movieId') && data['movieId'] != null) {
+          movieId = int.tryParse(data['movieId'].toString()) ?? 0; // Pastikan movieId adalah integer
+        }
+        // get transactionId by doc.id
+        transactionId = doc.id; 
       }
 
       txs.add({
         'startDate': startDate,
         'endDate': endDate,
         'movieTitle': movieTitle,
+        'movieId': movieId,
+        'transactionId': transactionId,
       });
     }
     print('DEBUG: Selesai _getUserTransactions. Mengembalikan ${txs.length} transaksi.');
@@ -111,6 +120,30 @@ class AdminHistoryScreen extends StatelessWidget {
                         ...txs.map((tx) => ListTile(
                               title: Text(tx['movieTitle']),
                               subtitle: Text('Tanggal: ${tx['startDate']} - ${tx['endDate']}'),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () {
+                                      // Logika untuk menghapus transaksi
+                                      FirebaseFirestore.instance
+                                          .collection('transactions')
+                                          .doc(tx['transactionId']) // Pastikan ini ada
+                                          .delete();
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_right),
+                                    onPressed: () {
+                                      Navigator.pushNamed(context, 'payment', arguments: {
+                                        'transactionId': tx['transactionId'],
+                                        'movieId': tx['movieId'],
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
                             )),
                         if (txs.isEmpty)
                           const Padding(
