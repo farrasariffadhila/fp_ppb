@@ -7,7 +7,7 @@ import '../Model/voucher.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
-
+import 'package:intl/intl.dart';
 class RentScreen extends StatefulWidget {
   final int movieId;
   
@@ -132,7 +132,9 @@ class _RentScreenState extends State<RentScreen> {
 
       setState(() {
         _appliedVoucher = voucher;
-        _discountedPrice = price * (_endDate!.difference(_startDate!).inDays) * (1 - voucher.discountPercentage / 100);
+        // apabila day different = 0, maka day different = 1
+        final daysDifference = _endDate != null && _startDate != null ? _endDate!.difference(_startDate!).inDays == 0 ? 1 : _endDate!.difference(_startDate!).inDays : 1;
+        _discountedPrice = (price * daysDifference) * (1 - voucher.discountPercentage / 100);
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -526,7 +528,7 @@ class _RentScreenState extends State<RentScreen> {
                               Container(
                                 alignment: Alignment.bottomRight,
                                 child: Text(
-                                  'Total Price: Rp ${_startDate != null && _endDate != null ? formatNumber(_appliedVoucher != null ? _discountedPrice.toInt() : price * (_endDate!.difference(_startDate!).inDays)) : formatNumber(price)}',
+                                  'Total Price: Rp ${_startDate != null && _endDate != null ? formatNumber(_appliedVoucher != null ? _discountedPrice.toInt() : _endDate!.difference(_startDate!).inDays < 1 ? price : price * (_endDate!.difference(_startDate!).inDays)) : formatNumber(price)}',
                                   style: TextStyle(fontSize: 20, color: Colors.white70),
                                   textAlign: TextAlign.center,
                                 ),
@@ -617,15 +619,15 @@ class _RentScreenState extends State<RentScreen> {
       onTap: () async {
         DateTime? pickedDate = await showDatePicker(
           context: context,
-          initialDate: DateTime.now(),
-          firstDate: DateTime(2000),
+          initialDate: DateFormat('dd/MM/yyyy').parse(controller.text.isEmpty ? DateFormat('dd/MM/yyyy').format(DateTime.now()) : controller.text),
+          firstDate: DateTime.now(),
           lastDate: DateTime(2101),
           builder: (BuildContext context, Widget? child) {
             return Theme(
               data: ThemeData.light().copyWith(
                 primaryColor: Colors.blueAccent, // Change the primary color
                 hintColor: Colors.blueAccent, // Change the accent color
-                colorScheme: ColorScheme.light(primary: Colors.blueAccent), // Change the color scheme
+                colorScheme: ColorScheme.dark(primary: Colors.blueAccent), // Change the color scheme
                 buttonTheme: ButtonThemeData(textTheme: ButtonTextTheme.primary), // Change button text color
               ),
               child: child!,
@@ -643,7 +645,6 @@ class _RentScreenState extends State<RentScreen> {
           decoration: InputDecoration(
             labelText: label,
             labelStyle: TextStyle(color: Colors.white), // White label text color
-            
             border: OutlineInputBorder(),
             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             suffixIcon: Icon(Icons.calendar_today, color: Colors.white), // Calendar icon color
