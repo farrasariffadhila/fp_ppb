@@ -6,7 +6,7 @@ import 'package:fp_ppb/Services/services.dart';
 
 class DetailScreen extends StatefulWidget {
   final int movieId;
-  
+
   const DetailScreen({super.key, required this.movieId});
 
   @override
@@ -18,10 +18,11 @@ class _DetailScreenState extends State<DetailScreen> {
   List<dynamic> cast = [];
   bool isLoading = true;
   bool isFavorite = false;
-  bool isInWishlist = false;
+  String? wishlistCategory;
   int wishlistCount = 0;
+  List<String> existingCategories = [];
 
-  
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final APIservices _apiServices = APIservices();
@@ -32,6 +33,27 @@ class _DetailScreenState extends State<DetailScreen> {
     _fetchMovieDetails();
     _checkFavoriteAndWishlistStatus();
     _getWishlistCount();
+    _fetchExistingWishlistCategories();
+  }
+
+  Future<void> _fetchExistingWishlistCategories() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    try {
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        final wishlist = List<Map<String, dynamic>>.from(data['wishlist'] ?? []);
+        final categories = wishlist.map((item) => item['category'] as String).toSet().toList();
+        if (mounted) {
+          setState(() {
+            existingCategories = categories;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching existing categories: $e');
+    }
   }
 
   Future<void> _getWishlistCount() async {
@@ -50,7 +72,6 @@ class _DetailScreenState extends State<DetailScreen> {
   Future<void> _fetchMovieDetails() async {
     try {
       final details = await _apiServices.getMovieDetails(widget.movieId);
-      
       final credits = await _apiServices.getMovieCredits(widget.movieId);
 
       if (credits != null) {
@@ -75,11 +96,19 @@ class _DetailScreenState extends State<DetailScreen> {
       if (doc.exists) {
         final data = doc.data()!;
         final favorites = List<int>.from(data['favourites'] ?? []);
-        final wishlist = List<int>.from(data['wishlist'] ?? []);
-        
+        final wishlist = List<Map<String, dynamic>>.from(data['wishlist'] ?? []);
+        final movieInWishlist = wishlist.firstWhere(
+          (item) => item['movieId'] == widget.movieId,
+          orElse: () => {},
+        );
+
         setState(() {
           isFavorite = favorites.contains(widget.movieId);
-          isInWishlist = wishlist.contains(widget.movieId);
+          if (movieInWishlist.isNotEmpty) {
+            wishlistCategory = movieInWishlist['category'];
+          } else {
+            wishlistCategory = null;
+          }
         });
       }
     } catch (e) {
@@ -110,28 +139,135 @@ class _DetailScreenState extends State<DetailScreen> {
     }
   }
 
-  Future<void> _toggleWishlist() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+  void _showCategoryDialog() {
+    final newCategoryController = TextEditingController();
+    String? selectedValue = wishlistCategory;
+    bool showNewCategoryField = false;
+    const String createNewCategoryOption = 'Buat Kategori Baru...';
 
-    try {
-      final docRef = _firestore.collection('users').doc(user.uid);
-      
-      if (isInWishlist) {
-        await docRef.update({
-          'wishlist': FieldValue.arrayRemove([widget.movieId])
-        });
-      } else {
-        await docRef.set({
-          'wishlist': FieldValue.arrayUnion([widget.movieId])
-        }, SetOptions(merge: true));
-      }
-      
-      setState(() => isInWishlist = !isInWishlist);
-    } catch (e) {
-      print('Wishlist error: $e');
-    }
-    _getWishlistCount();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final dropdownItems = [
+              ...existingCategories,
+              if (!existingCategories.contains(createNewCategoryOption))
+                createNewCategoryOption,
+            ];
+            if (wishlistCategory != null && !dropdownItems.contains(wishlistCategory)) {
+                dropdownItems.insert(0, wishlistCategory!);
+            }
+
+
+            return AlertDialog(
+              backgroundColor: Colors.grey[900],
+              title: Text(
+                wishlistCategory == null ? 'Add to Wishlist' : 'Update Wishlist',
+                style: TextStyle(color: Colors.white),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: selectedValue,
+                    items: dropdownItems.map((String category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        if (value == createNewCategoryOption) {
+                          showNewCategoryField = true;
+                          selectedValue = null;
+                        } else {
+                          showNewCategoryField = false;
+                          selectedValue = value;
+                        }
+                      });
+                    },
+                    hint: Text("Pilih kategori", style: TextStyle(color: Colors.white70)),
+                    dropdownColor: Colors.grey[800],
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  if (showNewCategoryField)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: TextField(
+                        controller: newCategoryController,
+                        autofocus: true,
+                        style: TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: "Nama kategori baru",
+                          hintStyle: TextStyle(color: Colors.white54),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                if (wishlistCategory != null)
+                  TextButton(
+                    onPressed: () async {
+                      final user = _auth.currentUser;
+                      if (user == null) return;
+                      final docRef = _firestore.collection('users').doc(user.uid);
+                      final movieToRemove = {
+                        'movieId': widget.movieId,
+                        'category': wishlistCategory!,
+                      };
+                      await docRef.update({
+                        'wishlist': FieldValue.arrayRemove([movieToRemove])
+                      });
+                      setState(() => wishlistCategory = null);
+                      Navigator.pop(context);
+                      await _getWishlistCount();
+                      await _fetchExistingWishlistCategories();
+                    },
+                    child: Text('Remove', style: TextStyle(color: Colors.red)),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel', style: TextStyle(color: Colors.white70)),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    String? finalCategory;
+                    if (showNewCategoryField) {
+                      finalCategory = newCategoryController.text.trim();
+                    } else {
+                      finalCategory = selectedValue;
+                    }
+
+                    if (finalCategory == null || finalCategory.isEmpty) return;
+
+                    final user = _auth.currentUser;
+                    if (user == null) return;
+                    final docRef = _firestore.collection('users').doc(user.uid);
+
+                    if (wishlistCategory != null && wishlistCategory != finalCategory) {
+                      final oldMovie = {'movieId': widget.movieId, 'category': wishlistCategory!};
+                      await docRef.update({'wishlist': FieldValue.arrayRemove([oldMovie])});
+                    }
+
+                    final movieToUpsert = {'movieId': widget.movieId, 'category': finalCategory};
+                    await docRef.update({'wishlist': FieldValue.arrayUnion([movieToUpsert])});
+                    
+                    setState(() => wishlistCategory = finalCategory);
+                    Navigator.pop(context);
+                    await _getWishlistCount();
+                    await _fetchExistingWishlistCategories();
+                  },
+                  child: Text(wishlistCategory == null ? 'Add' : 'Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   String _formatRuntime(int minutes) {
@@ -216,7 +352,7 @@ class _DetailScreenState extends State<DetailScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Lottie.asset(
-                'assets/lottie/error_animation.json', // Add error animation
+                'assets/lottie/error_animation.json',
                 width: 150,
                 height: 150,
                 fit: BoxFit.contain,
@@ -257,6 +393,7 @@ class _DetailScreenState extends State<DetailScreen> {
     final runtime = movieDetails!['runtime'] ?? 0;
     final rating = (movieDetails!['vote_average'] ?? 0.0).toDouble();
     final overview = movieDetails!['overview'] ?? 'No description available.';
+    final bool isInWishlist = wishlistCategory != null;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -283,7 +420,7 @@ class _DetailScreenState extends State<DetailScreen> {
                   isInWishlist ? Icons.bookmark : Icons.bookmark_border,
                   color: isInWishlist ? Colors.blue : Colors.white,
                 ),
-                onPressed: _toggleWishlist,
+                onPressed: _showCategoryDialog,
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
