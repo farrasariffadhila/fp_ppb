@@ -4,6 +4,24 @@ class InventoryService {
   final CollectionReference _inventory =
       FirebaseFirestore.instance.collection('inventory');
 
+  Stream<QuerySnapshot> getInventoryItems() {
+    return _inventory.snapshots();
+  }
+
+  Future<void> changeAvailableStock(int movieId, int jumlahTambah) async {
+    final docRef = _inventory.doc(movieId.toString());
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      int available = 0;
+      if (snapshot.exists) {
+        available = (snapshot.data() as Map<String, dynamic>)['availableCount'] ?? 0;
+        transaction.update(docRef, {'availableCount': available + jumlahTambah});
+      } else {
+        transaction.set(docRef, {'availableCount': jumlahTambah});
+      }
+    });
+  }
+
   Future<bool> reserveMovie(int movieId) async {
     final docRef = _inventory.doc(movieId.toString());
     return FirebaseFirestore.instance.runTransaction((transaction) async {
