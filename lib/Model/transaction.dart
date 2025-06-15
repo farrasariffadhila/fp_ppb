@@ -13,6 +13,7 @@ class TransactionModel {
   final String transactionId;
   final String userId;
   final String status;
+  final bool isReturned;
 
   TransactionModel({
     required this.id,
@@ -27,6 +28,7 @@ class TransactionModel {
     required this.transactionId,
     required this.userId,
     required this.status,
+    required this.isReturned,
   });
 
   factory TransactionModel.fromDocument(DocumentSnapshot doc) {
@@ -44,6 +46,7 @@ class TransactionModel {
       transactionId: data['transactionId']?.toString() ?? '',
       userId: data['userID'] ?? '',
       status: data['status'] ?? 'waiting for confirmation',
+      isReturned: data['isReturned'] ?? false,
     );
   }
 
@@ -60,6 +63,7 @@ class TransactionModel {
       'transactionId': transactionId,
       'userID': userId,
       'status': status,
+      'isReturned': isReturned,
     };
   }
 } 
