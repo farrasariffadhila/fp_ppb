@@ -1,5 +1,7 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:fp_ppb/Services/services.dart';
 import '../Model/model.dart';
@@ -112,9 +114,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TransactionHistoryScreen())),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.check, color: Colors.white),
-                  title: const Text('Test', style: TextStyle(color: Colors.white)),
-                  onTap: () => Navigator.pushNamed(context, 'test'),
+                  leading: const Icon(Icons.bug_report, color: Colors.white),
+                  title: const Text('Test Crash', style: TextStyle(color: Colors.white)),
+                  onTap: () => FirebaseCrashlytics.instance.crash(),
                 ),
                 const Divider(),
                 ListTile(

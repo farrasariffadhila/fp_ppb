@@ -59,4 +59,5 @@ class DefaultFirebaseOptions {
     projectId: 'fp-ppb-b1f14',
     storageBucket: 'fp-ppb-b1f14.firebasestorage.app',
   );
+
 }
