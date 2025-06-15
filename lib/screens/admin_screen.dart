@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import '../Services/inventory_service.dart';
 
 class AdminScreen extends StatefulWidget {
   final String adminEmail;
@@ -20,6 +21,7 @@ class AdminScreen extends StatefulWidget {
 
 class _AdminScreenState extends State<AdminScreen> {
   final Map<String, Future<String>> _movieTitleCache = {};
+  final InventoryService _inventoryService = InventoryService();
 
 
   Future<String> _getMovieTitle(String movieId) async {
@@ -329,9 +331,13 @@ class _AdminScreenState extends State<AdminScreen> {
                                 value: 'lost', 
                                 child: Text('Lost', style: TextStyle(color: Colors.red[700]))),
                             ],
-                            onChanged: (value) {
+                            onChanged: (value) async {
                               if (value != null) {
-                                FirebaseFirestore.instance.collection('transactions').doc(tx.id).update({'status': value});
+                                if (value == 'returned' && !tx.isReturned) {
+                                  await _inventoryService.returnMovie(int.tryParse(tx.movieId) ?? 0);
+                                  await FirebaseFirestore.instance.collection('transactions').doc(tx.id).update({'isReturned': true});
+                                }
+                                await FirebaseFirestore.instance.collection('transactions').doc(tx.id).update({'status': value});
                               }
                             },
                           ),

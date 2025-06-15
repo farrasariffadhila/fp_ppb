@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fp_ppb/Services/services.dart';
+import 'package:fp_ppb/Services/inventory_service.dart';
 import 'login.dart';
 import '../Model/voucher.dart';
 import 'package:flutter/rendering.dart';
@@ -30,6 +31,7 @@ class _RentScreenState extends State<RentScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final APIservices _apiServices = APIservices();
+  final InventoryService _inventoryService = InventoryService();
   
   static const price = 50000;
   Voucher? _appliedVoucher;
@@ -150,6 +152,16 @@ class _RentScreenState extends State<RentScreen> {
   void addTransaction(movieid) async {
     if (_formKey.currentState?.validate() ?? false) {
       try {
+        final reserved = await _inventoryService.reserveMovie(movieid);
+        if (!reserved) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Movie tidak tersedia')),
+            );
+          }
+          return;
+        }
+
         final now = DateTime.now();
         final transactionRef = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}${now.millisecond.toString().padLeft(3, '0')}';
         
@@ -173,6 +185,7 @@ class _RentScreenState extends State<RentScreen> {
           'status': 'waiting for confirmation',
           'voucherCode': _appliedVoucher?.code,
           'discountApplied': _appliedVoucher != null ? _appliedVoucher!.discountPercentage : 0,
+          'isReturned': false,
         });
 
         if (_appliedVoucher != null) {
@@ -186,6 +199,7 @@ class _RentScreenState extends State<RentScreen> {
 
       } catch (e) {
         print('Error adding transaction: $e');
+        await _inventoryService.returnMovie(movieid);
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error adding transaction: ${e.toString()}')),
