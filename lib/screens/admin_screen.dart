@@ -4,6 +4,7 @@ import '../Model/transaction.dart';
 import 'admin_profile_screen.dart';
 import 'admin_history_screen.dart';
 import 'admin_voucher_screen.dart';
+import 'admin_movie_item_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -229,6 +230,18 @@ class _AdminScreenState extends State<AdminScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => AdminProfileScreen(adminEmail: widget.adminEmail),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.movie),
+              title: const Text('Movie Inventory'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdminMovieItemPage(),
                   ),
                 );
               },
