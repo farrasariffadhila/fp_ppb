@@ -349,9 +349,11 @@ class _RentScreenState extends State<RentScreen> {
                                   height: 100,
                                   child: Text(
                                     overview,
+                                    maxLines: 4,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: 18,
-                                      color: Colors.white70, // Lighter text color
+                                      color: Colors.white70,
                                     ),
                                   ),
                                 ),
@@ -450,15 +452,6 @@ class _RentScreenState extends State<RentScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Apply Voucher',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
                                   Row(
                                     children: [
                                       Expanded(
