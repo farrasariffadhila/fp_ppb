@@ -46,6 +46,13 @@ Aplikasi Flutter untuk menyewa film yang terintegrasi dengan Firebase dan The Mo
   - Membuat fitur **Konfirmasi Status Transaksi** oleh admin
   - Membuat fitur **Search Movie**
   - Membuat fitur **History Transaksi** sisi admin dan user
+- **Audrey Sasqhia Wijaya**
+  - Membuat fitur **Detail Page**
+  - Membuat fitur **Wishlist** (create/read/delete/update)
+  - Menambahkan model **Movie** dan mengintegrasikan
+  - Menambahkan fitur **Edit Profile**
+  - Menambahkan page **Profile Page**
+  - Mengintegrasikan fitur **Favorite**, **Wishlist**, dan **Rent** pada halaman detail.
 
 ## Fitur Utama
 
@@ -90,7 +97,7 @@ Aplikasi Flutter untuk menyewa film yang terintegrasi dengan Firebase dan The Mo
 | Fitur | Create | Read | Update | Delete |
 |-------|--------|------|--------|--------|
 | Favourite | Menambahkan film ke daftar favorit | Menampilkan daftar film tersimpan |  Menghapus film dari daftar | - |
-| Wishlist | Menambahkan film ke daftar wishlist | Menampilkan daftar film tersimpan | Mengubah kategori atau memindahkan film | Menghapus film dari daftar |
+| Wishlist | Menambahkan film ke daftar wishlist | Menampilkan daftar film tersimpan | Mengubah catatan dan mengubah catatan film | Menghapus film dari daftar |
 | Transaksi Penyewaan | Membuat transaksi baru saat penyewaan film | Melihat riwayat transaksi | Mengubah status (disetujui, dikembalikan) dan keterangan transaksi | Menghapus data trasaksi |
 | Inventori | Menambah stok film yang belum ada di daftar | Melihat stok yang tersedia | Menyesuaikan jumlah stok | - |
 | Voucher | Menambahkan voucher baru | Menampilkan daftar voucher aktif | Menandai voucher sebagai terpakai | Menghapus/menonaktifkan voucher |
