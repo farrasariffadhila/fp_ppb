@@ -26,22 +26,100 @@ class _WishlistScreenState extends State<WishlistScreen> {
         context, MaterialPageRoute(builder: (context) => const LoginScreen()));
   }
 
-  Future<void> _removeFromWishlist(int movieId, String category) async {
+  Future<void> _removeFromWishlist(int movieId) async {
     try {
-      final movieToRemove = {'movieId': movieId, 'category': category};
-      await _firestore.collection('users').doc(userId).update({
-        'wishlist': FieldValue.arrayRemove([movieToRemove])
-      });
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Removed from wishlist')),
-      );
+      final docRef = _firestore.collection('users').doc(userId);
+      final docSnapshot = await docRef.get();
+
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data()!;
+        final wishlist = List<Map<String, dynamic>>.from(data['wishlist'] ?? []);
+        
+        final itemToRemove = wishlist.firstWhere(
+          (item) => item['movieId'] == movieId,
+          orElse: () => {},
+        );
+
+        if (itemToRemove.isNotEmpty) {
+          await docRef.update({
+            'wishlist': FieldValue.arrayRemove([itemToRemove])
+          });
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Removed from wishlist')),
+          );
+        }
+      }
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
     }
+  }
+
+  Future<void> _showEditNoteDialog(int movieId, String currentNote) async {
+    final noteController = TextEditingController(text: currentNote);
+    
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: const Text('Update Note', style: TextStyle(color: Colors.white)),
+          content: TextField(
+            controller: noteController,
+            autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: "Update your note here...",
+              hintStyle: TextStyle(color: Colors.white54),
+              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white70)),
+            ),
+            maxLines: 3,
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              child: const Text('Update'),
+              onPressed: () async {
+                final newNote = noteController.text.trim();
+                final docRef = _firestore.collection('users').doc(userId);
+
+                try {
+                  final doc = await docRef.get();
+                  if (doc.exists) {
+                    final data = doc.data()!;
+                    final wishlist = List<Map<String, dynamic>>.from(data['wishlist'] ?? []);
+                    
+                    final movieIndex = wishlist.indexWhere((item) => item['movieId'] == movieId);
+
+                    if (movieIndex != -1) {
+                      wishlist[movieIndex]['note'] = newNote;
+                      await docRef.set({'wishlist': wishlist}, SetOptions(merge: true));
+                    }
+                  }
+                } catch (e) {
+                   if (!context.mounted) return;
+                   ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error updating note: ${e.toString()}')),
+                  );
+                }
+
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _navigateToDetailScreen(BuildContext context, Movie movie) {
@@ -51,7 +129,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
         builder: (context) => DetailScreen(movieId: movie.id),
       ),
     ).then((_) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     });
   }
 
@@ -125,107 +205,111 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         return const Center(child: Text("Could not load movie details.", style: TextStyle(color: Colors.white)));
                     }
 
-                    final Map<String, List<Movie>> groupedMovies = {};
-                    for (var item in wishlistItems) {
-                      final category = item['category'] as String;
+                    final fullWishlist = wishlistItems.map((item) {
                       final movie = movies.firstWhere(
                         (m) => m.id == item['movieId'],
                         orElse: () => Movie(id: 0, title: 'Not Found', posterPath: null, backDropPath: '', overview: ''),
                       );
-                      if (movie.id != 0) {
-                        if (groupedMovies[category] == null) {
-                          groupedMovies[category] = [];
-                        }
-                        groupedMovies[category]!.add(movie);
-                      }
-                    }
+                      return {
+                        'movie': movie,
+                        'note': item['note'] ?? ''
+                      };
+                    }).where((element) => (element['movie'] as Movie).id != 0).toList();
 
-                    final categories = groupedMovies.keys.toList();
-
-                    return ListView.builder(
-                      itemCount: categories.length,
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(12),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.5,
+                      ),
+                      itemCount: fullWishlist.length,
                       itemBuilder: (context, index) {
-                        final category = categories[index];
-                        final moviesInCategory = groupedMovies[category]!;
-                        return Theme(
-                          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                          child: ExpansionTile(
-                            initiallyExpanded: true,
-                            title: Text(
-                              category,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold),
-                            ),
+                        final item = fullWishlist[index];
+                        final movie = item['movie'] as Movie;
+                        final note = item['note'] as String;
+
+                        return GestureDetector(
+                          onTap: () => _navigateToDetailScreen(context, movie),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              SizedBox(
-                                height: 250,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  itemCount: moviesInCategory.length,
-                                  itemBuilder: (context, movieIndex) {
-                                    final movie = moviesInCategory[movieIndex];
-                                    return GestureDetector(
-                                      onTap: () => _navigateToDetailScreen(context, movie),
-                                      child: Container(
-                                        width: 140,
-                                        margin: const EdgeInsets.only(right: 12),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Stack(
-                                                children: [
-                                                  ClipRRect(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    child: movie.posterPath != null
-                                                        ? Image.network(
-                                                            'https://image.tmdb.org/t/p/w342${movie.posterPath}',
-                                                            fit: BoxFit.cover,
-                                                            width: 140,
-                                                            errorBuilder: (context, error, stackTrace) {
-                                                              return Container(color: Colors.grey[800], child: const Center(child: Icon(Icons.broken_image, color: Colors.white24)));
-                                                            },
-                                                          )
-                                                        : Container(color: Colors.grey[800], child: const Center(child: Icon(Icons.movie, color: Colors.white24))),
-                                                  ),
-                                                  Positioned(
-                                                    top: 4,
-                                                    right: 4,
-                                                    child: CircleAvatar(
-                                                      backgroundColor: Colors.black.withOpacity(0.6),
-                                                      radius: 16,
-                                                      child: IconButton(
-                                                        padding: EdgeInsets.zero,
-                                                        icon: const Icon(Icons.close, color: Colors.white, size: 16),
-                                                        onPressed: () => _removeFromWishlist(movie.id, category),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 8.0),
-                                              child: Text(
-                                                movie.title,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
+                              Expanded(
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        image: movie.posterPath != null ? DecorationImage(
+                                          image: NetworkImage('https://image.tmdb.org/t/p/w342${movie.posterPath}'),
+                                          fit: BoxFit.cover,
+                                        ) : null,
+                                        color: Colors.grey[800],
+                                      ),
+                                      child: movie.posterPath == null ? const Center(child: Icon(Icons.movie, color: Colors.white24, size: 40)) : null,
+                                    ),
+                                    Positioned(
+                                      top: 4,
+                                      right: 4,
+                                      child: CircleAvatar(
+                                        backgroundColor: Colors.black.withOpacity(0.7),
+                                        radius: 16,
+                                        child: IconButton(
+                                          padding: EdgeInsets.zero,
+                                          icon: const Icon(Icons.close, color: Colors.white, size: 16),
+                                          onPressed: () => _removeFromWishlist(movie.id),
                                         ),
                                       ),
-                                    );
-                                  },
+                                    ),
+                                  ],
                                 ),
-                              )
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0, left: 4, right: 4),
+                                child: Text(
+                                  movie.title,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (note.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4.0, left: 4, right: 4),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(Icons.notes, color: Colors.white54, size: 14),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          note,
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontStyle: FontStyle.italic,
+                                            fontSize: 12,
+                                          ),
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      // --- PENAMBAHAN ICON EDIT ---
+                                      SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: IconButton(
+                                          padding: EdgeInsets.zero,
+                                          icon: const Icon(Icons.edit, color: Colors.white54, size: 14),
+                                          onPressed: () => _showEditNoteDialog(movie.id, note),
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         );

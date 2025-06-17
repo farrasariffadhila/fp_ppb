@@ -43,6 +43,10 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pushNamed(context, 'wishlist');
   }
 
+   void profile(BuildContext context) {
+    Navigator.pushNamed(context, 'profile');
+  }
+
   void _navigateToDetailScreen(BuildContext context, Movie movie) {
     Navigator.push(
       context,
@@ -97,6 +101,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     backgroundColor: Colors.grey,
                     child: Icon(Icons.person, color: Colors.white),
                   ),
+                ),
+                 ListTile(
+                  leading: const Icon(Icons.person, color: Colors.white),
+                  title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
+                  onTap: () => profile(context),
                 ),
                 ListTile(
                   leading: const Icon(Icons.favorite, color: Colors.white),

@@ -18,10 +18,8 @@ class _DetailScreenState extends State<DetailScreen> {
   List<dynamic> cast = [];
   bool isLoading = true;
   bool isFavorite = false;
-  String? wishlistCategory;
+  String? wishlistNote;
   int wishlistCount = 0;
-  List<String> existingCategories = [];
-
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -33,27 +31,6 @@ class _DetailScreenState extends State<DetailScreen> {
     _fetchMovieDetails();
     _checkFavoriteAndWishlistStatus();
     _getWishlistCount();
-    _fetchExistingWishlistCategories();
-  }
-
-  Future<void> _fetchExistingWishlistCategories() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-    try {
-      final doc = await _firestore.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        final data = doc.data()!;
-        final wishlist = List<Map<String, dynamic>>.from(data['wishlist'] ?? []);
-        final categories = wishlist.map((item) => item['category'] as String).toSet().toList();
-        if (mounted) {
-          setState(() {
-            existingCategories = categories;
-          });
-        }
-      }
-    } catch (e) {
-      print('Error fetching existing categories: $e');
-    }
   }
 
   Future<void> _getWishlistCount() async {
@@ -93,7 +70,7 @@ class _DetailScreenState extends State<DetailScreen> {
 
     try {
       final doc = await _firestore.collection('users').doc(user.uid).get();
-      if (doc.exists) {
+      if (doc.exists && mounted) {
         final data = doc.data()!;
         final favorites = List<int>.from(data['favourites'] ?? []);
         final wishlist = List<Map<String, dynamic>>.from(data['wishlist'] ?? []);
@@ -105,9 +82,9 @@ class _DetailScreenState extends State<DetailScreen> {
         setState(() {
           isFavorite = favorites.contains(widget.movieId);
           if (movieInWishlist.isNotEmpty) {
-            wishlistCategory = movieInWishlist['category'];
+            wishlistNote = movieInWishlist['note'];
           } else {
-            wishlistCategory = null;
+            wishlistNote = null;
           }
         });
       }
@@ -139,132 +116,88 @@ class _DetailScreenState extends State<DetailScreen> {
     }
   }
 
-  void _showCategoryDialog() {
-    final newCategoryController = TextEditingController();
-    String? selectedValue = wishlistCategory;
-    bool showNewCategoryField = false;
-    const String createNewCategoryOption = 'Buat Kategori Baru...';
-
+  void _showNoteDialog() {
+    final noteController = TextEditingController(text: wishlistNote);
     showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final dropdownItems = [
-              ...existingCategories,
-              if (!existingCategories.contains(createNewCategoryOption))
-                createNewCategoryOption,
-            ];
-            if (wishlistCategory != null && !dropdownItems.contains(wishlistCategory)) {
-                dropdownItems.insert(0, wishlistCategory!);
-            }
-
-
-            return AlertDialog(
-              backgroundColor: Colors.grey[900],
-              title: Text(
-                wishlistCategory == null ? 'Add to Wishlist' : 'Update Wishlist',
-                style: TextStyle(color: Colors.white),
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: Text(
+            wishlistNote == null ? 'Add Note to Wishlist' : 'Update Note',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: TextField(
+            controller: noteController,
+            autofocus: true,
+            style: TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: "Tulis catatanmu di sini...",
+              hintStyle: TextStyle(color: Colors.white54),
+              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white70)),
+            ),
+            maxLines: 3,
+          ),
+          actions: [
+            if (wishlistNote != null)
+              TextButton(
+                onPressed: () async {
+                  final user = _auth.currentUser;
+                  if (user == null) return;
+                  final docRef = _firestore.collection('users').doc(user.uid);
+                  
+                  final movieToRemove = {
+                    'movieId': widget.movieId,
+                    'note': wishlistNote, 
+                  };
+                  await docRef.update({
+                    'wishlist': FieldValue.arrayRemove([movieToRemove])
+                  });
+                  
+                  if (mounted) {
+                    setState(() => wishlistNote = null);
+                  }
+                  Navigator.pop(context);
+                  await _getWishlistCount();
+                },
+                child: Text('Remove', style: TextStyle(color: Colors.red)),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    value: selectedValue,
-                    items: dropdownItems.map((String category) {
-                      return DropdownMenuItem<String>(
-                        value: category,
-                        child: Text(category),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        if (value == createNewCategoryOption) {
-                          showNewCategoryField = true;
-                          selectedValue = null;
-                        } else {
-                          showNewCategoryField = false;
-                          selectedValue = value;
-                        }
-                      });
-                    },
-                    hint: Text("Pilih kategori", style: TextStyle(color: Colors.white70)),
-                    dropdownColor: Colors.grey[800],
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  if (showNewCategoryField)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16.0),
-                      child: TextField(
-                        controller: newCategoryController,
-                        autofocus: true,
-                        style: TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: "Nama kategori baru",
-                          hintStyle: TextStyle(color: Colors.white54),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              actions: [
-                if (wishlistCategory != null)
-                  TextButton(
-                    onPressed: () async {
-                      final user = _auth.currentUser;
-                      if (user == null) return;
-                      final docRef = _firestore.collection('users').doc(user.uid);
-                      final movieToRemove = {
-                        'movieId': widget.movieId,
-                        'category': wishlistCategory!,
-                      };
-                      await docRef.update({
-                        'wishlist': FieldValue.arrayRemove([movieToRemove])
-                      });
-                      setState(() => wishlistCategory = null);
-                      Navigator.pop(context);
-                      await _getWishlistCount();
-                      await _fetchExistingWishlistCategories();
-                    },
-                    child: Text('Remove', style: TextStyle(color: Colors.red)),
-                  ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel', style: TextStyle(color: Colors.white70)),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    String? finalCategory;
-                    if (showNewCategoryField) {
-                      finalCategory = newCategoryController.text.trim();
-                    } else {
-                      finalCategory = selectedValue;
-                    }
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final user = _auth.currentUser;
+                if (user == null) return;
 
-                    if (finalCategory == null || finalCategory.isEmpty) return;
+                final docRef = _firestore.collection('users').doc(user.uid);
+                final newNote = noteController.text.trim();
+                
+                final doc = await docRef.get();
+                final data = doc.data() as Map<String, dynamic>? ?? {};
+                final wishlist = List<Map<String, dynamic>>.from(data['wishlist'] ?? []);
+                
+                final movieIndex = wishlist.indexWhere((item) => item['movieId'] == widget.movieId);
 
-                    final user = _auth.currentUser;
-                    if (user == null) return;
-                    final docRef = _firestore.collection('users').doc(user.uid);
-
-                    if (wishlistCategory != null && wishlistCategory != finalCategory) {
-                      final oldMovie = {'movieId': widget.movieId, 'category': wishlistCategory!};
-                      await docRef.update({'wishlist': FieldValue.arrayRemove([oldMovie])});
-                    }
-
-                    final movieToUpsert = {'movieId': widget.movieId, 'category': finalCategory};
-                    await docRef.update({'wishlist': FieldValue.arrayUnion([movieToUpsert])});
-                    
-                    setState(() => wishlistCategory = finalCategory);
-                    Navigator.pop(context);
-                    await _getWishlistCount();
-                    await _fetchExistingWishlistCategories();
-                  },
-                  child: Text(wishlistCategory == null ? 'Add' : 'Update'),
-                ),
-              ],
-            );
-          },
+                if (movieIndex != -1) {
+                  wishlist[movieIndex]['note'] = newNote;
+                } else {
+                  wishlist.add({'movieId': widget.movieId, 'note': newNote});
+                }
+                
+                await docRef.set({'wishlist': wishlist}, SetOptions(merge: true));
+                
+                if (mounted) {
+                  setState(() => wishlistNote = newNote);
+                }
+                Navigator.pop(context);
+                await _getWishlistCount();
+              },
+              child: Text(wishlistNote == null ? 'Add' : 'Update'),
+            ),
+          ],
         );
       },
     );
@@ -314,22 +247,6 @@ class _DetailScreenState extends State<DetailScreen> {
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              width: 200,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[800],
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: LinearProgressIndicator(
-                  backgroundColor: Colors.transparent,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[400]!),
-                ),
               ),
             ),
           ],
@@ -393,7 +310,7 @@ class _DetailScreenState extends State<DetailScreen> {
     final runtime = movieDetails!['runtime'] ?? 0;
     final rating = (movieDetails!['vote_average'] ?? 0.0).toDouble();
     final overview = movieDetails!['overview'] ?? 'No description available.';
-    final bool isInWishlist = wishlistCategory != null;
+    final bool isInWishlist = wishlistNote != null;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -420,7 +337,7 @@ class _DetailScreenState extends State<DetailScreen> {
                   isInWishlist ? Icons.bookmark : Icons.bookmark_border,
                   color: isInWishlist ? Colors.blue : Colors.white,
                 ),
-                onPressed: _showCategoryDialog,
+                onPressed: _showNoteDialog,
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -431,15 +348,6 @@ class _DetailScreenState extends State<DetailScreen> {
                     Image.network(
                       'https://image.tmdb.org/t/p/w780$backdropPath',
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[900],
-                          child: const Center(
-                            child: Icon(Icons.broken_image, 
-                                color: Colors.white24, size: 50),
-                          ),
-                        );
-                      },
                     )
                   else
                     Container(
@@ -461,7 +369,7 @@ class _DetailScreenState extends State<DetailScreen> {
                       ),
                     ),
                   ),
-                  Positioned(
+                   Positioned(
                     bottom: 20,
                     left: 20,
                     right: 20,
@@ -596,7 +504,6 @@ class _DetailScreenState extends State<DetailScreen> {
                       itemBuilder: (context, index) {
                         final actor = cast[index];
                         final profilePath = actor['profile_path'];
-                        
                         return Container(
                           width: 100,
                           margin: const EdgeInsets.only(right: 16),
@@ -641,7 +548,6 @@ class _DetailScreenState extends State<DetailScreen> {
                                 ),
                                 textAlign: TextAlign.center,
                                 maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -676,7 +582,6 @@ class _DetailScreenState extends State<DetailScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
                 ],
               ),
             ),

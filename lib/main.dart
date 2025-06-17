@@ -16,6 +16,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'screens/admin_screen.dart';
+import 'package:fp_ppb/screens/profile.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,6 +77,7 @@ class MyApp extends StatelessWidget {
       routes: {
         'home': (context) => const HomeScreen(),
         'login': (context) => const LoginScreen(),
+        'profile': (context) => const ProfileScreen(),
         'register': (context) => const RegisterScreen(),
         'favourite': (context) => const FavouriteScreen(),
         'rent': (context) {
