@@ -1,6 +1,29 @@
-# Movie Rental App
+# MovieRent
 
 Aplikasi Flutter untuk menyewa film yang terintegrasi dengan Firebase dan The Movie Database (TMDB) API. Proyek ini memanfaatkan Firestore sebagai basis data cloud, Crashlytics untuk pelaporan error, serta konfigurasi splash screen dan launcher icon.
+
+
+## User UI
+<div align="center">
+   <img src="https://github.com/user-attachments/assets/1f9d174b-4e40-46c3-93d7-639765df4cb2" width="245"/>
+   <img src="https://github.com/user-attachments/assets/43c0b2c8-0605-4097-9754-7383a5c49f9b" width="245"/>
+   <img src="https://github.com/user-attachments/assets/21b56a91-a21e-44dd-97e9-84c2dc925ac7" width="245"/>
+   <img src="https://github.com/user-attachments/assets/034450e4-3e5b-4bcd-9911-c8ac3bafb7a2" width="245"/>
+   <img src="https://github.com/user-attachments/assets/56021c63-54e9-4f08-b33b-7f213b4876a0" width="245"/>
+   <img src="https://github.com/user-attachments/assets/7fdccf91-f523-40d7-b6b7-317fc21cda65" width="245"/>
+   <img src="https://github.com/user-attachments/assets/74fa6179-5e90-4993-a94d-ac52a1528b6a" width="245"/>
+   <img src="https://github.com/user-attachments/assets/8822675d-b46c-4d79-9bd8-dc7cbbc2fcf3" width="245"/>
+</div>
+
+## Admin UI
+<div align="center">
+   <img src="https://github.com/user-attachments/assets/f5a266b3-7a21-4d05-9fcb-8999e8a99cbc" width="245"/>
+   <img src="https://github.com/user-attachments/assets/f32efc04-4327-4da9-87c7-93458711661b" width="245"/>
+   <img src="https://github.com/user-attachments/assets/83be6137-a6b8-4d51-94fd-ab241e6aa771" width="245"/>
+   <img src="https://github.com/user-attachments/assets/8c2cdfa9-7952-4b50-b62b-c8a9b6570902" width="245"/>
+   <img src="https://github.com/user-attachments/assets/0207ea16-5859-4e3c-91be-3ada671f7d87" width="245"/>
+</div>
+
 
 ## Rincian Kontribusi
 
@@ -53,7 +76,7 @@ Aplikasi Flutter untuk menyewa film yang terintegrasi dengan Firebase dan The Mo
    flutter pub run flutter_native_splash:create
    ```
 
-### Implementasi CRUD
+## Implementasi CRUD
 
 | Fitur | Create | Read | Update | Delete |
 |-------|--------|------|--------|--------|
