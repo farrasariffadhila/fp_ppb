@@ -37,6 +37,15 @@ Aplikasi Flutter untuk menyewa film yang terintegrasi dengan Firebase dan The Mo
   - Mengelola **inventory movie** serta pembaruan stok film
   - Menyertakan **Crashlytics** untuk monitoring error aplikasi
   - Membuat **Splash Screen** dan **Launcher Icon**
+- **Muhammad Farras Arif Fadhila**
+  - Membuat fitur **Login Page**
+  - Integrasi **API**
+  - Membuat **Homescreen** dan drawer user
+  - Membuat **Admin Panel/Screen**, drawer admin dan **Edit profile admin** (Update)
+  - Membuat fitur **Voucher** dan bisa digunakan saat user melakukan transaksi dan input voucher pada kolomnya (Create/Delete)
+  - Membuat fitur **Konfirmasi Status Transaksi** oleh admin
+  - Membuat fitur **Search Movie**
+  - Membuat fitur **History Transaksi** sisi admin dan user
 
 ## Fitur Utama
 
